@@ -100,4 +100,26 @@ let rec typecheck linEnv env = function
   | Async { application } ->
     let (_, linEnv', env') = typecheck linEnv env application in
     (`Unit, linEnv', env')
+  | For { name; first; last; forBody } ->
+    let (firstTy, _, _) = typecheck linEnv env first
+    and (lastTy, _, _) = typecheck linEnv env last in
+    if firstTy <> `Int || lastTy <> `Int then
+      failwith "For loop bounds must be integers"
+    else begin
+      let envName = Env.add name `Int env in
+      match typecheck LinEnv.empty envName forBody with
+      | (ty, linEnv', _) when linEnv' = LinEnv.empty ->
+        (ty, linEnv, env)
+      | _ -> failwith "Unused promises in for loop"
+    end
+  | While { whileCond; whileBody } ->
+    let (condTy, _, _) = typecheck linEnv env whileCond in
+    if condTy <> `Bool then
+      failwith "While condition must be a bool"
+    else begin
+      match typecheck LinEnv.empty env whileBody with
+      | (ty, linEnv', _) when linEnv' = LinEnv.empty ->
+        (ty, linEnv, env)
+      | _ -> failwith "Unused promises in while loop"
+    end
   | Promise _ -> failwith "Promise must be named"

@@ -48,6 +48,8 @@ type expr =
   | Write of { promiseStar: expr; newValue: expr }
   | Read of { promise: expr }
   | Async of { application: expr }
+  | For of { name: string; first: expr; last: expr; forBody: expr }
+  | While of { whileCond: expr; whileBody: expr }
 
 let example =
   Let { id="a"; annot=`Int; value=(Number 5);
