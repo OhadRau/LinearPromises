@@ -97,4 +97,7 @@ let rec typecheck linEnv env = function
         (thenType, thenLinEnv, env)
     | _ -> failwith "If condition is not a boolean"
   end
-  | _ -> failwith "Unimplemented"
+  | Async { application } ->
+    let (_, linEnv', env') = typecheck linEnv env application in
+    (`Unit, linEnv', env')
+  | Promise _ -> failwith "Promise must be named"
