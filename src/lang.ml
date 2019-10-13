@@ -7,6 +7,15 @@ type ty = [
   | `PromiseStar of primitive_ty
   | `Function of ty list * ty ]
 
+let rec string_of_ty = function
+  | `Int -> "Int"
+  | `Bool -> "Bool"
+  | `Unit -> "Unit"
+  | `Promise ty -> "Promise(" ^ string_of_ty (ty :> ty) ^ ")"
+  | `PromiseStar ty -> "Promise*(" ^ string_of_ty (ty :> ty) ^ ")"
+  | `Function (args, result) ->
+     "(" ^ String.concat ", " (List.map string_of_ty args) ^ ") -> " ^ string_of_ty result
+
 module Ident : sig
   type t
   val of_string : string -> t
