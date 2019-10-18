@@ -1,17 +1,34 @@
 open Lang
 
+module LinEnv = Set.Make(String)
 module Env = struct
   include Map.Make(String)
 
   let inter =
     let f _key val0 val1 = match (val0, val1) with
     | (Some v0, Some v1) when v0 = v1 -> Some v0
-    | (Some _, Some _) -> failwith "Key mismatch in env"
+    | (Some _, Some _) -> failwith "Type mismatch in env"
     | (Some v, None) | (None, Some v) -> Some v
     | (None, None) -> None in
     merge f
+  
+  let replace key value env =
+    add key value (remove key env)
+
+  (* Apply deltas to oldEnv from newEnv based on which linear
+     variables were eliminated in the new linear environment *)
+  let cover oldLinEnv newLinEnv oldEnv newEnv =
+    let deltas = LinEnv.diff oldLinEnv newLinEnv in
+    let copy key oldType =
+      if LinEnv.mem key deltas then
+        find key newEnv
+      else
+        oldType in
+    mapi copy oldEnv
+  
+  let print show env =
+    print_endline @@ fold (fun k v result -> k ^ ": " ^ show v ^ "; " ^ result) env ""
 end
-module LinEnv = Set.Make(String)
 
 (* typecheck : linear -> env -> expr -> (ty * linear * env) *)
 (* TODO: Assert that delta = {} at the end of every program *)
@@ -35,8 +52,8 @@ let rec typecheck linEnv env = function
   | Let { id; annot; value; body } ->
     let (ty, linEnv0, env0) = typecheck linEnv env value in
     if ty = annot then begin
-      let envId = Env.add id annot env in
-      let (tau', linEnv1, env1) = typecheck linEnv envId body in
+      let envId = Env.add id annot env0 in
+      let (tau', linEnv1, env1) = typecheck linEnv0 envId body in
       (tau', LinEnv.inter linEnv0 linEnv1, Env.inter env0 env1)
     end else
       failwith "Unmatched type in let expression"
@@ -45,9 +62,9 @@ let rec typecheck linEnv env = function
       | [] -> ([], linEnv', env')
       | (Variable v as arg)::rest -> begin
         match typecheck linEnv env arg with
-        | (`PromiseStar _ as p, _, _) ->
+        | (`PromiseStar tau as p, _, _) ->
           let (tys, linEnvN, envN) = 
-            evalArgs (LinEnv.remove v linEnv') (Env.remove v env') rest in
+            evalArgs (LinEnv.remove v linEnv') (Env.replace v (`Promise tau) env') rest in
           (p::tys, linEnvN, envN)
         | (t, linEnvN, envN) ->
           let (tys, _, _) = evalArgs linEnv' env' rest in
@@ -62,8 +79,12 @@ let rec typecheck linEnv env = function
     | (`Function (argTypes, returnType), _, _) ->
       if List.for_all2 (=) argTypes tys then
         (returnType, linEnv', env')
-      else
+      else begin
+        print_endline @@ "Expected: " ^ (List.map string_of_ty argTypes |> String.concat ", ");
+        print_endline @@ "Got: " ^ (List.map string_of_ty tys |> String.concat ", ");
+        Env.print string_of_ty env';
         failwith "Type mismatch in function application"
+      end
     | _ -> failwith "Cannot call a non-function"
   end
   | Write { promiseStar = Variable p; newValue } -> begin
@@ -71,7 +92,7 @@ let rec typecheck linEnv env = function
     if Env.mem p env then
       match Env.find p env with
       | `PromiseStar tau when ty = (tau :> ty) ->
-        (`Unit, LinEnv.remove p linEnv, Env.remove p env)
+        (`Unit, LinEnv.remove p linEnv, Env.replace p (`Promise tau) env)
       | _ -> failwith "Write location does not match expected type"
     else
       failwith "Write location does not exist"
@@ -87,14 +108,17 @@ let rec typecheck linEnv env = function
   | If { condition; then_branch; else_branch } -> begin
     match typecheck linEnv env condition with
     | (`Bool, _, _) ->
-      let (thenType, thenLinEnv, _) = typecheck linEnv env then_branch
+      let (thenType, thenLinEnv, thenEnv) = typecheck linEnv env then_branch
       and (elseType, elseLinEnv, _) = typecheck linEnv env else_branch in
       if thenType <> elseType then
         failwith "Type mismatch between conditional branches"
       else if thenLinEnv <> elseLinEnv then
         failwith "Conditional branches do not consume the same promises"
       else
-        (thenType, thenLinEnv, env)
+        (* HACK: thenEnv, elseEnv can replace the type of a promise --
+           how do we copy these modified types without allowing new vars
+           declared in the branches to escape their scope? *)
+        (thenType, thenLinEnv, Env.cover linEnv thenLinEnv env thenEnv)
     | _ -> failwith "If condition is not a boolean"
   end
   | Async { application } ->
