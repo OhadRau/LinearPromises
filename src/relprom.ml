@@ -24,11 +24,14 @@ let () =
                         then_branch=(Write { promiseStar=(Variable "p");
                                              newValue=(Number 10) });
                         else_branch=(Apply { fn=(Variable "f");
-                                             args=[Variable "p"] }) };
+                                              args=[Variable "p"] }) };
                 body = Apply { fn = (Variable "unsafeWrite"); args = [Variable "p"; Number 42] }
           }) }
   and delta = LinEnv.empty
   and gamma = Env.empty |> Env.add "f" (`Function ([`PromiseStar `Int], `Unit))
                         |> Env.add "unsafeWrite" (`Function ([`Promise `Int; `Int], `Unit)) in
   let (ty, _, _) = typecheck delta gamma program in
-  print_endline (string_of_ty ty)
+  print_endline (string_of_ty ty);
+  print_endline "---------------";
+  let javaProgram = JavaCG.emit program in
+  print_endline javaProgram
