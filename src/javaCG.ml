@@ -14,7 +14,7 @@ let rec java_type = function
   | `Bool -> "Boolean"
   | `Unit -> "Unit" (* Unit class *)
   | `Promise k -> Printf.sprintf "Promise<%s>" (java_type (k :> ty))
-  | `PromiseStar k -> Printf.sprintf "OwnedPromise<%s>" (java_type (k :> ty))
+  | `PromiseStar k -> Printf.sprintf "Promise<%s>" (java_type (k :> ty))
   | `Function (_, _) -> failwith "Cannot create temp function variable"
 
 let rec emit_args = function
@@ -48,15 +48,15 @@ and emit ?(in_expr=false) = function
       (emit ~in_expr:true fn) (emit_args args)
   | Promise { ty } ->
     let ty' = java_type (ty :> ty) in
-    Printf.sprintf "new OwnedPromise<%s>()" ty'
+    Printf.sprintf "new Promise<%s>()" ty'
   | Write { promiseStar; newValue } ->
-    Printf.sprintf "%s.write(%s)"
+    Printf.sprintf "%s.fulfill(%s)"
       (emit ~in_expr:true promiseStar) (emit ~in_expr:true newValue)
   | Read { promise } ->
-    Printf.sprintf "%s.read()"
+    Printf.sprintf "%s.get()"
       (emit ~in_expr:true promise)
   | Async { application } ->
-    Printf.sprintf "async(() -> %s)"
+    Printf.sprintf "$_rt.async(new AsyncTask(() -> %s))"
       (emit ~in_expr:true application)
   | For _ | While _ when not in_expr ->
     failwith "Cannot use for/while loop inside of an expression"
@@ -70,3 +70,36 @@ and emit ?(in_expr=false) = function
   | While { whileCond; whileBody } ->
     Printf.sprintf "while (%s) { %s }"
     (emit ~in_expr:true whileCond) (emit whileBody)
+
+let rec emit_params = function
+  | [] -> ""
+  | [arg, ty] -> Printf.sprintf "%s %s" (java_type ty) (make_id arg)
+  | (arg, ty)::args ->
+    Printf.sprintf "%s %s, %s"
+      (java_type ty) (make_id arg) (emit_params args)
+
+let emit_fun { funcName; retType; params; expr } =
+  Printf.sprintf {|
+  public static %s %s(%s) {
+    %s
+  }
+|}
+  (java_type retType) funcName (emit_params params) (emit expr)
+
+let emit_program { programName; funcs } =
+  let functions =
+    List.map emit_fun funcs |> String.concat "\n" in
+  Printf.sprintf {|
+import lang.promises.*;
+
+public class %s {
+  private static Runtime $_rt;
+
+%s
+
+  public static void main(String[] args) {
+    $_rt = new Runtime();
+  }  
+}
+|}
+  programName functions

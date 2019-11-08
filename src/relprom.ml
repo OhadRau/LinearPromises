@@ -33,5 +33,15 @@ let () =
   let (ty, _, _) = typecheck delta gamma program in
   print_endline (string_of_ty ty);
   print_endline "---------------";
-  let javaProgram = JavaCG.emit program in
+  let javaProgram = JavaCG.emit_program {
+    programName = "PromiseExample";
+    funcs = [
+      {
+        funcName = "g";
+        retType = `Unit;
+        params = [];
+        expr = program
+      }
+    ]
+  } in
   print_endline javaProgram

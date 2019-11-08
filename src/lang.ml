@@ -51,6 +51,18 @@ type expr =
   | For of { name: string; first: expr; last: expr; forBody: expr }
   | While of { whileCond: expr; whileBody: expr }
 
+type func = {
+  funcName: string;
+  retType: ty;
+  params: (string * ty) list;
+  expr: expr
+}
+
+type program = {
+  programName: string;
+  funcs: func list
+}
+
 let example =
   Let { id="a"; annot=`Int; value=(Number 5);
         body=(If { condition=(Apply { fn=(Variable ">");
