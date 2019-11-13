@@ -1,3 +1,6 @@
+(ocamllex lexer)
+(menhir (modules parser))
+
 (executable
   (name relprom)
-  (libraries batteries))
+  (libraries batteries menhirLib))

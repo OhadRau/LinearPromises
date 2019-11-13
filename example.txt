@@ -1,0 +1,9 @@
+func g(): Unit begin
+  let p : Promise*(Int) = promise Int in
+  if true then
+    p <- 10
+  else
+    f(p)
+  end;
+  unsafeWrite(p, 42)
+end
