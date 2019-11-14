@@ -48,7 +48,7 @@ let rec typecheck linEnv env = function
         failwith "Linear variable not consumed"
       | (tau', _, _) -> (tau', linEnv, env)
     end else
-      failwith "Unmatched promise type in let expression"
+      failwith ("Unmatched promise type in let expression: Got " ^ string_of_ty (`PromiseStar ty) ^ ", expected " ^ string_of_ty annot)
   | Let { id; annot; value; body } ->
     let (ty, linEnv0, env0) = typecheck linEnv env value in
     if ty = annot then begin
@@ -56,7 +56,7 @@ let rec typecheck linEnv env = function
       let (tau', linEnv1, env1) = typecheck linEnv0 envId body in
       (tau', LinEnv.inter linEnv0 linEnv1, Env.inter env0 env1)
     end else
-      failwith "Unmatched type in let expression"
+      failwith ("Unmatched type in let expression: Got " ^ string_of_ty ty ^ ", expected " ^ string_of_ty annot)
   | Apply { fn; args } -> begin
     let rec evalArgs linEnv' env' = function
       | [] -> ([], linEnv', env')
