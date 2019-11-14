@@ -39,6 +39,7 @@ end
 
 type expr =
   | Variable of string
+  | Unit
   | Number of int
   | Boolean of bool
   | Let of { id: string; annot: ty; value: expr; body: expr }

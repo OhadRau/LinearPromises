@@ -33,6 +33,7 @@ end
 (* typecheck : linear -> env -> expr -> (ty * linear * env) *)
 (* TODO: Assert that delta = {} at the end of every program *)
 let rec typecheck linEnv env = function
+  | Unit -> (`Unit, linEnv, env)
   | Boolean _ -> (`Bool, linEnv, env)
   | Number _ -> (`Int, linEnv, env)
   | Variable v when Env.mem v env ->

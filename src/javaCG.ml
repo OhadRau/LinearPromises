@@ -41,6 +41,7 @@ and emit ?(in_expr=false) = function
   | e when not in_expr ->
     Printf.sprintf "return %s;" (emit ~in_expr:true e)
   | Variable v -> v
+  | Unit -> "Unit.the"
   | Number n -> string_of_int n
   | Boolean b -> string_of_bool b
   | Apply { fn; args } ->

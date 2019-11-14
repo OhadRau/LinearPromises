@@ -18,7 +18,7 @@ public class Promise<T> {
         owner = task;
     }
 
-    public void fulfill(T value) {
+    public Unit fulfill(T value) {
         synchronized (lock) {
             lock.lock();
             this.value = value;
@@ -26,6 +26,7 @@ public class Promise<T> {
             lock.notifyAll();
             lock.unlock();
         }
+        return Unit.the;
     }
 
     public T get() {

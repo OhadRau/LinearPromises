@@ -77,6 +77,8 @@ params:
 ;
 
 expr:
+  | LEFT_PAREN RIGHT_PAREN
+    { Unit }
   | LEFT_PAREN; e = expr; RIGHT_PAREN
     { e }
   | LET; id = IDENT; COLON; annot = type_decl; EQUAL; value = expr; IN; body = expr

@@ -18,10 +18,14 @@ public class Runtime {
         pool = Executors.newFixedThreadPool(num_threads);
     }
 
-    public void async(Runnable r) {
+    public Unit async(Runnable r) {
         pool.execute(r);
+        return Unit.the;
     }
-    public void async(AsyncTask t) { t.run(pool); }
+    public Unit async(AsyncTask t) {
+        t.run(pool);
+        return Unit.the;
+    }
 
     public static void main(String[] args) {
         Runtime rt = new Runtime();

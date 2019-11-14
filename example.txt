@@ -9,7 +9,7 @@ func g(): Unit begin
     let q : Promise*(Bool) = promise Bool in
     let u : Unit = q <- true in
     let z : Bool = ?q in
-    u
+    ()
   end;
   unsafeWrite(p, 42)
 end
