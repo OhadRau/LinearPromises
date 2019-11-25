@@ -12,8 +12,8 @@ func main(): Int begin
   let sum: Promise*(Int) = promise Int in
   let a: Promise*(Int) = promise Int in
   let b: Promise*(Int) = promise Int in
-  let _: Unit = async add(sum, a, b) in
-  let _: Unit = async f(a) in
-  let _: Unit = async f(b) in
+  async add(sum, a, b);
+  async f(a);
+  async f(b);
   ?sum
 end

@@ -34,6 +34,11 @@
 
 %token EOF
 
+%right SEMICOLON IN
+%nonassoc ASYNC
+%nonassoc QUESTION LEFT_ARROW
+%nonassoc LEFT_PAREN
+
 %start<Lang.program> program
 %%
 
