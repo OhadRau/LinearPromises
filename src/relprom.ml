@@ -61,7 +61,7 @@ let () =
                           |> load_env program.funcs in
     let typecheck_and_print func =
       let ty = typecheck_fn gamma func in
-      print_endline (string_of_ty ty);
+      print_endline (func.funcName ^ ": " ^ string_of_ty ty);
       print_endline "---------------" in
     List.iter typecheck_and_print program.funcs;
     let javaProgram = JavaCG.emit_program program in
