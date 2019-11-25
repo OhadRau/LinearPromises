@@ -60,6 +60,8 @@ let () =
                           |> Env.add "f" (`Function ([`PromiseStar `Int], `Unit))
                           |> load_env program.funcs in
     let typecheck_and_print func =
+      print_endline (string_of_expr func.expr);
+      print_endline "---------------";
       let ty = typecheck_fn gamma func in
       print_endline (func.funcName ^ ": " ^ string_of_ty ty);
       print_endline "---------------" in
