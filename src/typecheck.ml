@@ -1,13 +1,22 @@
 open Lang
 
-module LinEnv = Set.Make(String)
+module LinEnv = struct
+  include Set.Make(String)
+
+  let to_string linEnv =
+    fold (fun s result -> s ^ "; " ^ result) linEnv ""
+  
+  let print linEnv =
+    print_endline @@ to_string linEnv
+end
 module Env = struct
   include Map.Make(String)
 
   let inter =
     let f _key val0 val1 = match (val0, val1) with
     | (Some v0, Some v1) when v0 = v1 -> Some v0
-    | (Some _, Some _) -> failwith "Type mismatch in env"
+    | (Some _a, Some b) -> Some b (* Take the updated type *)
+      (*failwith ("Type mismatch in env for variable " ^ key ^ ": " ^ string_of_ty a ^ " vs. " ^ string_of_ty b)*)
     | (Some v, None) | (None, Some v) -> Some v
     | (None, None) -> None in
     merge f
@@ -45,9 +54,11 @@ let rec typecheck linEnv env = function
       let linEnvP = LinEnv.add id linEnv
       and envP = Env.add id annot env in
       match typecheck linEnvP envP body with
-      | (_, linEnv', _) when linEnv' <> linEnv ->
-        failwith "Linear variable not consumed"
-      | (tau', _, _) -> (tau', linEnv, env)
+      | (tau', linEnv', _) ->
+        let notEliminated = LinEnv.diff linEnv' linEnv in
+        if notEliminated = linEnv' then
+          (tau', linEnv', env)
+        else failwith ("Linear variables not consumed: " ^ LinEnv.to_string @@ LinEnv.diff linEnv' linEnv)
     end else
       failwith ("Unmatched promise type in let expression: Got " ^ string_of_ty (`PromiseStar ty) ^ ", expected " ^ string_of_ty annot)
   | Let { id; annot; value; body } ->
@@ -59,37 +70,42 @@ let rec typecheck linEnv env = function
     end else
       failwith ("Unmatched type in let expression: Got " ^ string_of_ty ty ^ ", expected " ^ string_of_ty annot)
   | Apply { fn; args } -> begin
-    let rec evalArgs linEnv' env' = function
-      | [] -> ([], linEnv', env')
-      | (Variable v as arg)::rest -> begin
-        match typecheck linEnv env arg with
-        | (`PromiseStar tau as p, _, _) ->
-          let (tys, linEnvN, envN) = 
-            evalArgs (LinEnv.remove v linEnv') (Env.replace v (`Promise tau) env') rest in
-          (p::tys, linEnvN, envN)
-        | (t, linEnvN, envN) ->
-          let (tys, _, _) = evalArgs linEnv' env' rest in
-          (t::tys, linEnvN, envN)
-      end
-      | expr::rest ->
-        let (t, _, _) = typecheck linEnv env expr
-        and (tys, linEnvN, envN) = evalArgs linEnv' env' rest in
-        (t::tys, linEnvN, envN) in
-    let (tys, linEnv', env') = evalArgs linEnv env args in
+    let rec evalArgs linEnv' env' params args =
+      begin match params, args with
+      | [], [] -> ([], linEnv', env')
+      | [], _ | _, [] -> failwith "Type mismatch in function application: number of parameters differed between expected and actual"
+      | expected_ty::prest, (Variable v as arg)::arest ->
+        begin match expected_ty, typecheck linEnv' env' arg with
+        | `PromiseStar tau, (`PromiseStar tau', linEnvN, envN) when tau = tau' ->
+          evalArgs (LinEnv.remove v linEnvN) (Env.replace v (`Promise tau) envN) prest arest
+        | `Promise tau, (`PromiseStar tau', linEnvN, envN) when tau = tau' ->
+          evalArgs linEnvN envN prest arest
+        | _, (t, linEnvN, envN) when t = expected_ty ->
+          evalArgs linEnvN envN prest arest
+        | _, (t, _, _) -> begin
+            print_endline @@ "Expected: " ^ string_of_ty expected_ty;
+            print_endline @@ "Got: " ^ string_of_ty t;
+            Env.print string_of_ty env';
+            failwith "Type mismatch in function application"
+          end
+        end
+      | expected_ty::prest, expr::arest ->
+        let (t, linEnvN, envN) = typecheck linEnv' env' expr in
+        if t = expected_ty then
+          evalArgs linEnvN envN prest arest
+        else begin
+          print_endline @@ "Expected: " ^ string_of_ty expected_ty;
+          print_endline @@ "Got: " ^ string_of_ty t;
+          Env.print string_of_ty env';
+          failwith "Type mismatch in function application"
+        end
+      end in
     match typecheck linEnv env fn with
     | (`Function (argTypes, returnType), _, _) ->
-      if List.length argTypes <> List.length tys then
-        failwith "Type mismatch in function application: number of parameters differed between expected and actual"
-      else if List.for_all2 (=) argTypes tys then
-        (returnType, linEnv', env')
-      else begin
-        print_endline @@ "Expected: " ^ (List.map string_of_ty argTypes |> String.concat ", ");
-        print_endline @@ "Got: " ^ (List.map string_of_ty tys |> String.concat ", ");
-        Env.print string_of_ty env';
-        failwith "Type mismatch in function application"
-      end
+      let (_, linEnv', env') = evalArgs linEnv env argTypes args in
+      (returnType, linEnv', env')
     | _ -> failwith "Cannot call a non-function"
-  end
+    end
   | Write { promiseStar = Variable p; newValue } -> begin
     let (ty, _, _) = typecheck linEnv env newValue in
     if Env.mem p env then
@@ -168,11 +184,12 @@ let rec load_params args linEnv env = match args with
     load_params params linEnv env'
 
 let typecheck_fn env = function
-  | { retType; params; expr; _ } ->
+  | { funcName; retType; params; expr } ->
     let linEnv', env' = load_params params (LinEnv.empty) env in
     let (ty, linEnv'', _) = typecheck linEnv' env' expr in
     if LinEnv.empty <> linEnv'' then
       failwith "Function must eliminate all linear variables"
     else if ty <> retType then
-      failwith "Function return value does not match declared type"
+      failwith ("Function '" ^ funcName ^ "' return value does not match declared type. Expected " ^ string_of_ty retType ^
+                ", Got: " ^ string_of_ty ty)
     else `Function (List.map snd params, retType)
