@@ -38,7 +38,7 @@ let rec typecheck linEnv env = function
   | Number _ -> (`Int, linEnv, env)
   | Variable v when Env.mem v env ->
     (Env.find v env, linEnv, env)
-  | Variable _ -> failwith "Unknown variable"
+  | Variable v -> failwith ("Unknown variable: " ^ v)
   | Let { id; annot; body;
           value = Promise { ty } } ->
     if annot = `PromiseStar ty then begin
@@ -78,7 +78,9 @@ let rec typecheck linEnv env = function
     let (tys, linEnv', env') = evalArgs linEnv env args in
     match typecheck linEnv env fn with
     | (`Function (argTypes, returnType), _, _) ->
-      if List.for_all2 (=) argTypes tys then
+      if List.length argTypes <> List.length tys then
+        failwith "Type mismatch in function application: number of parameters differed between expected and actual"
+      else if List.for_all2 (=) argTypes tys then
         (returnType, linEnv', env')
       else begin
         print_endline @@ "Expected: " ^ (List.map string_of_ty argTypes |> String.concat ", ");
@@ -148,3 +150,29 @@ let rec typecheck linEnv env = function
       | _ -> failwith "Unused promises in while loop"
     end
   | Promise _ -> failwith "Promise must be named"
+
+let rec load_env fns env = match fns with
+  | [] -> env
+  | { funcName; retType; params; _ }::funcs ->
+    let env' = Env.add funcName (`Function (List.map snd params, retType)) env in
+    load_env funcs env'
+
+let rec load_params args linEnv env = match args with
+  | [] -> (linEnv, env)
+  | (name, `PromiseStar ty)::params ->
+    let env' = Env.add name (`PromiseStar ty) env
+    and linEnv' = LinEnv.add name linEnv in
+    load_params params linEnv' env'
+  | (name, ty)::params ->
+    let env' = Env.add name ty env in
+    load_params params linEnv env'
+
+let typecheck_fn env = function
+  | { retType; params; expr; _ } ->
+    let linEnv', env' = load_params params (LinEnv.empty) env in
+    let (ty, linEnv'', _) = typecheck linEnv' env' expr in
+    if LinEnv.empty <> linEnv'' then
+      failwith "Function must eliminate all linear variables"
+    else if ty <> retType then
+      failwith "Function return value does not match declared type"
+    else `Function (List.map snd params, retType)

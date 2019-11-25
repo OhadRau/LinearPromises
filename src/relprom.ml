@@ -56,12 +56,12 @@ let () =
                 body = Apply { fn = (Variable "unsafeWrite"); args = [Variable "p"; Number 42] }
           }) }
   and *)
-  let delta = LinEnv.empty
-  and gamma = Env.empty |> Env.add "f" (`Function ([`PromiseStar `Int], `Unit))
-                        |> Env.add "unsafeWrite" (`Function ([`Promise `Int; `Int], `Unit)) in
   let eval program =
+    let gamma = Env.empty |> Env.add "unsafeWrite" (`Function ([`Promise `Int; `Int], `Unit))
+                          |> Env.add "f" (`Function ([`PromiseStar `Int], `Unit))
+                          |> load_env program.funcs in
     let typecheck_and_print func =
-      let (ty, _, _) = typecheck delta gamma (func.expr) in
+      let ty = typecheck_fn gamma func in
       print_endline (string_of_ty ty);
       print_endline "---------------" in
     List.iter typecheck_and_print program.funcs;
