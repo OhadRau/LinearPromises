@@ -54,8 +54,7 @@ let () =
                         else_branch=(Apply { fn=(Variable "f");
                                               args=[Variable "p"] }) };
                 body = Apply { fn = (Variable "unsafeWrite"); args = [Variable "p"; Number 42] }
-          }) }
-  and *)
+          }) } in *)
   let eval program =
     let gamma = Env.empty |> Env.add "unsafeWrite" (`Function ([`Promise `Int; `Int], `Unit))
                           |> Env.add "f" (`Function ([`PromiseStar `Int], `Unit))
@@ -68,4 +67,4 @@ let () =
     let javaProgram = JavaCG.emit_program program in
     print_endline javaProgram in
 
-  read_file eval "example.txt"
+  read_file eval (if Array.length Sys.argv > 1 then Sys.argv.(1) else "example.txt")
