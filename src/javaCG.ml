@@ -24,7 +24,11 @@ let rec emit_args = function
     Printf.sprintf "%s, %s"
       (emit ~in_expr:true arg) (emit_args args)
 
-and emit ?(in_expr=false) = function
+and emit ?(in_expr=false) = function 
+  | Let { id = "_"; value = (For _) as loop; body; _ }
+  | Let { id = "_"; value = (While _) as loop; body; _ } ->
+    Printf.sprintf "%s %s"
+      (emit ~in_expr loop) (emit body)
   | Let { id; annot; value; body } ->
     let ty = java_type annot in
     Printf.sprintf "%s %s = %s; %s"
@@ -35,6 +39,18 @@ and emit ?(in_expr=false) = function
   | If { condition; then_branch; else_branch } ->
     Printf.sprintf "if (%s) { %s } else { %s }"
       (emit ~in_expr:true condition) (emit then_branch) (emit else_branch)
+  | For _ | While _ when in_expr ->
+    failwith "Cannot use for/while loop inside of an expression"
+  | For { name; first; last; forBody } ->
+    (* TODO: What if last < first? What if type(first) != int? *)
+    Printf.sprintf "for (int %s = %s; %s < %s; %s++) { %s }"
+      name (* = *) (emit ~in_expr:true first) (* ; *)
+      name (* < *) (emit ~in_expr:true last)  (* ; *)
+      name (* ++ *)
+      (emit forBody)
+  | While { whileCond; whileBody } ->
+    Printf.sprintf "while (%s) { %s }"
+    (emit ~in_expr:true whileCond) (emit whileBody)
   (* TODO: How do we get the final ; + return when it's needed?
      This works ok for now because of our functional AST but e.g. we can't do
      something like: while (true) { ... }; return a; *)
@@ -59,18 +75,6 @@ and emit ?(in_expr=false) = function
   | Async { application } ->
     Printf.sprintf "$_rt.async(new AsyncTask(() -> %s))"
       (emit ~in_expr:true application)
-  | For _ | While _ when not in_expr ->
-    failwith "Cannot use for/while loop inside of an expression"
-  | For { name; first; last; forBody } ->
-    (* TODO: What if last < first? What if type(first) != int? *)
-    Printf.sprintf "for (int %s = %s; %s < %s; %s++) { %s }"
-      name (* = *) (emit ~in_expr:true first) (* ; *)
-      name (* < *) (emit ~in_expr:true last)  (* ; *)
-      name (* ++ *)
-      (emit forBody)
-  | While { whileCond; whileBody } ->
-    Printf.sprintf "while (%s) { %s }"
-    (emit ~in_expr:true whileCond) (emit whileBody)
 
 let rec emit_params = function
   | [] -> ""
