@@ -31,6 +31,7 @@ public class Runtime {
         Runtime rt = new Runtime();
         Promise<Integer> pInt = new Promise<Integer>();
         rt.async(new AsyncTask(() -> {
+            System.out.println("Thread id: " + AsyncTask.currentTask().id());
             System.out.println(pInt.get() * 2);
         }));
         rt.async(() -> {
