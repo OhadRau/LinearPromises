@@ -102,6 +102,11 @@ public class %s {
 
 %s
 
+  public static <T> Unit unsafeWrite(Promise<T> p, T v) {
+    p.fulfill(v);
+    return Unit.the;
+  }
+
   public static void main(String[] args) {
     $_rt = new PromiseRuntime();
   }
