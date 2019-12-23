@@ -16,27 +16,6 @@ let rec string_of_ty = function
   | `Function (args, result) ->
      "(" ^ String.concat ", " (List.map string_of_ty args) ^ ") -> " ^ string_of_ty result
 
-module Ident : sig
-  type t
-  val of_string : string -> t
-  val to_string : t -> string
-  val compare : t -> t -> int
-end = struct
-  type t = string * int
-
-  let unique = ref 0
-
-  let of_string str =
-    let result = (str, !unique) in
-    unique := !unique + 1;
-    result
-
-  let to_string (str, _) = str
-
-  let compare (_, id0) (_, id1) =
-    compare id0 id1
-end
-
 type expr =
   | Variable of string
   | Unit
