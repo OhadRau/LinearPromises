@@ -26,35 +26,6 @@ let read_file eval filename =
   read eval lexbuf
 
 let () =
-  (*
-  fun g() {
-    let p : Promise*(Int) = promise Int in
-    if true then
-      p <- 10
-    else
-      f(p)
-    end
-    unsafeWrite(p, 42)
-  }
-  *)
-  (*
-  let program =
-    (* Let { id="p"; annot=(`PromiseStar `Int); value=(Promise {ty=`Int});
-      body = Let { id="q"; annot=(`PromiseStar `Int); value=(Promise {ty=`Int});
-          body=(If { condition=(Boolean true);
-                          then_branch=(Write { promiseStar=(Variable "p");
-                                                newValue=(Number 10) });
-                          else_branch=(Apply { fn=(Variable "f");
-                                                args=[Variable "p"] }) }) } } *)
-    Let { id="p"; annot=(`PromiseStar `Int); value=(Promise {ty=`Int});
-          body=(Let { id="_"; annot=`Unit; value =
-                  If { condition=(Boolean true);
-                        then_branch=(Write { promiseStar=(Variable "p");
-                                             newValue=(Number 10) });
-                        else_branch=(Apply { fn=(Variable "f");
-                                              args=[Variable "p"] }) };
-                body = Apply { fn = (Variable "unsafeWrite"); args = [Variable "p"; Number 42] }
-          }) } in *)
   let eval program =
     let gamma = Env.empty |> Env.add "unsafeWrite" (`Function ([`Promise `Int; `Int], `Unit))
                           |> Env.add "f" (`Function ([`PromiseStar `Int], `Unit))
