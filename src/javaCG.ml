@@ -98,13 +98,13 @@ let emit_program { programName; funcs } =
 import lang.promises.*;
 
 public class %s {
-  private static Runtime $_rt;
+  private static PromiseRuntime $_rt;
 
 %s
 
   public static void main(String[] args) {
-    $_rt = new Runtime();
-  }  
+    $_rt = new PromiseRuntime();
+  }
 }
 |}
   programName functions

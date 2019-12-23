@@ -3,17 +3,17 @@ package lang.promises;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class Runtime {
+public class PromiseRuntime {
     private static final int MAX_THREADS = 10;
 
     private ExecutorService pool;
     private int num_threads;
 
-    public Runtime() {
+    public PromiseRuntime() {
         this(MAX_THREADS);
     }
 
-    public Runtime(int num_threads) {
+    public PromiseRuntime(int num_threads) {
         this.num_threads = num_threads;
         pool = Executors.newFixedThreadPool(num_threads);
     }
@@ -28,7 +28,7 @@ public class Runtime {
     }
 
     public static void main(String[] args) {
-        Runtime rt = new Runtime();
+        PromiseRuntime rt = new PromiseRuntime();
         Promise<Integer> pInt = new Promise<Integer>();
         rt.async(new AsyncTask(() -> {
             System.out.println("Thread id: " + AsyncTask.currentTask().id());
