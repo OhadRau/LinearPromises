@@ -112,6 +112,8 @@ let rec typecheck linEnv env = function
       match Env.find p env with
       | `PromiseStar tau when ty = (tau :> ty) ->
         (`Unit, LinEnv.remove p linEnv, Env.replace p (`Promise tau) env)
+      | `Promise tau when ty = (tau :> ty) ->
+        (`Unit, linEnv, env)
       | _ -> failwith "Write location does not match expected type"
     else
       failwith "Write location does not exist"
