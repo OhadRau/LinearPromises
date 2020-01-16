@@ -22,6 +22,7 @@ let rec java_type = function
   | `Int -> "Integer"
   | `Bool -> "Boolean"
   | `Unit -> "Unit" (* Unit class *)
+  | `Custom name -> name
   | `Promise k -> Printf.sprintf "Promise<%s>" (java_type (k :> ty))
   | `PromiseStar k -> Printf.sprintf "Promise<%s>" (java_type (k :> ty))
   | `Function (_, _) -> failwith "Cannot create temp function variable"
@@ -100,7 +101,7 @@ let emit_fun { funcName; retType; params; expr } =
 |}
   (java_type retType) funcName (emit_params params) (emit expr)
 
-let emit_program { programName; funcs } =
+let emit_program { programName; funcs; types = _types } =
   let functions =
     List.map emit_fun funcs |> String.concat "\n" in
   Printf.sprintf {|

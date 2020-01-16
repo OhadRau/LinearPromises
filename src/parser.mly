@@ -3,6 +3,8 @@
 %token <string> IDENT
 
 %token FUNC
+%token UNION
+%token RECORD
 %token BEGIN
 %token END
 
@@ -44,25 +46,65 @@
 %%
 
 program:
-  | EOF                       { { programName="Example"; funcs=[] } }
-  | fn = func; prog = program { { prog with funcs=fn::prog.funcs } }
+  | EOF                            { { programName="Example"; funcs=[]; types=[] } }
+  | fn = func; prog = program      { { prog with funcs=fn::prog.funcs } }
+  | ty = type_decl; prog = program { { prog with types=ty::prog.types } }
 ;
 
 func:
-  | FUNC; name = IDENT; LEFT_PAREN; p = params; RIGHT_PAREN COLON; t = type_decl;
+  | FUNC; name = IDENT; LEFT_PAREN; p = params; RIGHT_PAREN COLON; t = type_expr;
     BEGIN; e = expr; END
     { { funcName = name; retType = t; params = p; expr = e } }
 ;
 
-primitive_type:
-  | TYPE_UNIT { `Unit }
-  | TYPE_BOOL { `Bool }
-  | TYPE_INT  { `Int }
+type_decl:
+  | RECORD; typeName = IDENT; BEGIN; fields = record_fields; END
+    { { Lang.typeName; typeDefn = Record fields } }
+  | UNION; typeName = IDENT; BEGIN; cases = union_cases; END
+    { { Lang.typeName; typeDefn = Union cases } }
 ;
 
-type_decl:
+record_fields:
+  |
+    { [] }
+  | name = IDENT; COLON; ty = type_expr
+    { [(name, ty)] }
+  | name = IDENT; COLON; ty = type_expr; SEMICOLON; rest = record_fields
+    { (name, ty)::rest }
+;
+
+union_cases:
+  |
+    { [] }
+  | name = IDENT
+    { [(name, [])] }
+  | name = IDENT; LEFT_PAREN; tys = type_args; RIGHT_PAREN
+    { [(name, tys)] }
+  | name = IDENT; SEMICOLON; rest = union_cases
+    { (name, [])::rest }
+  | name = IDENT; LEFT_PAREN; tys = type_args; RIGHT_PAREN; SEMICOLON; rest = union_cases
+    { (name, tys)::rest }
+;
+
+primitive_type:
+  | TYPE_UNIT  { `Unit }
+  | TYPE_BOOL  { `Bool }
+  | TYPE_INT   { `Int }
+  | id = IDENT { `Custom id }
+;
+
+type_args:
+  |
+    { [] }
+  | e = type_expr
+    { [e] }
+  | e = type_expr; COMMA; rest = type_args
+    { e::rest }
+;
+
+type_expr:
 (* We don't actually need to parse function types
-  | LEFT_PAREN; args = type_list; RIGHT_PAREN RIGHT_ARROW; ret = type_decl
+  | LEFT_PAREN; args = type_list; RIGHT_PAREN RIGHT_ARROW; ret = type_expr
      { `Function (args, ret) }
 *)
   | ty = primitive_type
@@ -76,9 +118,9 @@ type_decl:
 params:
   |
     { [] }
-  | id = IDENT; COLON; ty = type_decl
+  | id = IDENT; COLON; ty = type_expr
     { [(id, ty)] }  
-  | id = IDENT; COLON; ty = type_decl; COMMA; rest = params
+  | id = IDENT; COLON; ty = type_expr; COMMA; rest = params
     { (id, ty)::rest }
 ;
 
@@ -87,7 +129,7 @@ expr:
     { Unit }
   | LEFT_PAREN; e = expr; RIGHT_PAREN
     { e }
-  | LET; id = IDENT; COLON; annot = type_decl; EQUAL; value = expr; IN; body = expr
+  | LET; id = IDENT; COLON; annot = type_expr; EQUAL; value = expr; IN; body = expr
     { Let { id; annot; value; body } }
   | IF; condition = expr; THEN; then_branch = expr; ELSE; else_branch = expr; END
     { If { condition; then_branch; else_branch } }

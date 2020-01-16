@@ -29,6 +29,8 @@ rule read = parse
   | int as i  { INT (int_of_string i) }
 
   | "func"    { FUNC }
+  | "union"   { UNION }
+  | "record"  { RECORD }
   | "begin"   { BEGIN }
   | "end"     { END }
   | "let"     { LET }

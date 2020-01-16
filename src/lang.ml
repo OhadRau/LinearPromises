@@ -1,8 +1,8 @@
 type primitive_ty =
-  [ `Int | `Bool | `Unit ]
+  [ `Int | `Bool | `Unit | `Custom of string ]
 
 type ty = [
-  | primitive_ty 
+  | primitive_ty
   | `Promise of primitive_ty
   | `PromiseStar of primitive_ty
   | `Function of ty list * ty ]
@@ -11,10 +11,49 @@ let rec string_of_ty = function
   | `Int -> "Int"
   | `Bool -> "Bool"
   | `Unit -> "Unit"
+  | `Custom name -> name
   | `Promise ty -> "Promise(" ^ string_of_ty (ty :> ty) ^ ")"
   | `PromiseStar ty -> "Promise*(" ^ string_of_ty (ty :> ty) ^ ")"
   | `Function (args, result) ->
      "(" ^ String.concat ", " (List.map string_of_ty args) ^ ") -> " ^ string_of_ty result
+
+type custom_ty =
+  | Record of (string * ty) list
+  | Union of (string * ty list) list
+
+type ty_decl = { typeName: string; typeDefn: custom_ty }
+
+let string_of_ty_decl {typeName; typeDefn} =
+  let rec format_record_cases = function
+    | [] -> ""
+    | [(name, ty)] ->
+      name ^ ": " ^ string_of_ty ty ^ "\n"
+    | (name, ty)::cases ->
+      name ^ ": " ^ string_of_ty ty ^ ";\n" ^
+      format_record_cases cases
+  and format_union_cases = function
+    | [] -> ""
+    | [(name, [])] ->
+      name ^ "\n"
+    | [(name, tys)] ->
+      let args = List.map string_of_ty tys |> String.concat "," in
+      name ^ "(" ^ args ^ ")\n"
+    | (name, [])::cases ->
+      name ^ ";\n" ^
+      format_union_cases cases
+    | (name, tys)::cases ->
+      let args = List.map string_of_ty tys |> String.concat "," in
+      name ^ "(" ^ args ^ ");\n" ^
+      format_union_cases cases in
+  match typeDefn with
+  | Record fields ->
+    "record " ^ typeName ^ " begin\n" ^
+    format_record_cases fields ^
+    "end"
+  | Union alternatives ->
+    "union " ^ typeName ^ " begin\n" ^
+    format_union_cases alternatives ^
+    "end"
 
 type expr =
   | Variable of string
@@ -65,7 +104,8 @@ type func = {
 
 type program = {
   programName: string;
-  funcs: func list
+  funcs: func list;
+  types: ty_decl list
 }
 
 let example =

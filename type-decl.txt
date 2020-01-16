@@ -1,0 +1,13 @@
+union IntList begin
+  Empty;
+  Node(Int, IntList)
+end
+
+record PairOfLists begin
+  left: IntList;
+  right: IntList
+end
+
+func main(): Unit begin
+  ()
+end
