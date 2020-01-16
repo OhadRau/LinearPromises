@@ -75,6 +75,8 @@ p
 let p: Promise*(Int) = promise Int in # Initialize promise (owned)
 let q: Promise(Int) = p in # or unowned
 p <- 6; # Write value to promise (only works with owned promises)
+# After writing to p once, it decays to a `Promise(Int)`
+p <~ 7; # Write value to promise (works with all promises)
 ?q # Read value from promise
 
 # Conditionals
