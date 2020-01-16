@@ -9,7 +9,7 @@ let string_of_position lexbuf =
     pos.pos_lnum
     (pos.pos_cnum - pos.pos_bol + 1)
 
-let read eval lexbuf =
+let read eval programName lexbuf =
   match Parser.program Lexer.read lexbuf with
   | exception Lexer.SyntaxError msg ->
     Printf.fprintf stderr "Syntax error: %s at %s\n"
@@ -18,12 +18,19 @@ let read eval lexbuf =
   | exception _ ->
     Printf.fprintf stderr "Syntax error at %s\n"
       (string_of_position lexbuf)
-  | e -> eval e
+  | e -> eval { e with programName }
 
 let read_file eval filename =
   let ic = open_in filename in
   let lexbuf = Lexing.from_channel ic in
-  read eval lexbuf
+  (* Get the program name by removing the full path, removing the
+     file extension, and capitalizing the first character. *)
+  let programName = filename
+    |> Filename.remove_extension
+    |> Filename.basename
+    |> JavaCG.make_valid_java_ident
+    |> String.capitalize_ascii in
+   read eval programName lexbuf
 
 let () =
   let eval program =

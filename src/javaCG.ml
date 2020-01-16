@@ -1,5 +1,14 @@
 open Lang
 
+let make_valid_java_ident string =
+  let buff = Buffer.create (String.length string) in
+  let add_if_valid index char = match char with
+    | 'a' .. 'z' | 'A' .. 'Z' | '_' | '$' -> Buffer.add_char buff char
+    | '0' .. '9' when index > 0 -> Buffer.add_char buff char
+    | _ -> () in
+  String.iteri add_if_valid string;
+  Buffer.contents buff
+
 let make_id =
   let unique = ref 0 in
   function
