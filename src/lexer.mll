@@ -57,6 +57,7 @@ rule read = parse
   | ':'       { COLON }
   | ';'       { SEMICOLON }
   | "<-"      { LEFT_ARROW }
+  | "<~"      { LEFT_TILDE_ARROW }
 (*  | "->"      { RIGHT_ARROW } *)
   | '?'       { QUESTION }
 

@@ -106,13 +106,13 @@ let rec typecheck linEnv env = function
       (returnType, linEnv', env')
     | _ -> failwith "Cannot call a non-function"
     end
-  | Write { promiseStar = Variable p; newValue } -> begin
+  | Write { promiseStar = Variable p; newValue; unsafe } -> begin
     let (ty, _, _) = typecheck linEnv env newValue in
     if Env.mem p env then
       match Env.find p env with
       | `PromiseStar tau when ty = (tau :> ty) ->
         (`Unit, LinEnv.remove p linEnv, Env.replace p (`Promise tau) env)
-      | `Promise tau when ty = (tau :> ty) ->
+      | `Promise tau when ty = (tau :> ty) && unsafe ->
         (`Unit, linEnv, env)
       | _ -> failwith "Write location does not match expected type"
     else

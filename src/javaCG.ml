@@ -66,7 +66,7 @@ and emit ?(in_expr=false) = function
   | Promise { ty } ->
     let ty' = java_type (ty :> ty) in
     Printf.sprintf "new Promise<%s>()" ty'
-  | Write { promiseStar; newValue } ->
+  | Write { promiseStar; newValue; _ } ->
     Printf.sprintf "%s.fulfill(%s)"
       (emit ~in_expr:true promiseStar) (emit ~in_expr:true newValue)
   | Read { promise } ->

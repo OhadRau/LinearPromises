@@ -30,13 +30,14 @@
 %token COLON
 %token SEMICOLON
 %token LEFT_ARROW
+%token LEFT_TILDE_ARROW
 %token QUESTION
 
 %token EOF
 
 %right SEMICOLON IN
 %nonassoc ASYNC
-%nonassoc QUESTION LEFT_ARROW
+%nonassoc QUESTION LEFT_ARROW LEFT_TILDE_ARROW
 %nonassoc LEFT_PAREN
 
 %start<Lang.program> program
@@ -95,7 +96,9 @@ expr:
   | PROMISE; ty = primitive_type
     { Promise { ty } }
   | promiseStar = expr; LEFT_ARROW; newValue = expr
-    { Write { promiseStar; newValue } }
+    { Write { promiseStar; newValue; unsafe = false } }
+  | promiseStar = expr; LEFT_TILDE_ARROW; newValue = expr
+    { Write { promiseStar; newValue; unsafe = true } }
   | QUESTION; promise = expr
     { Read { promise } }
   | ASYNC; application = expr

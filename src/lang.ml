@@ -25,7 +25,7 @@ type expr =
   | If of { condition: expr; then_branch: expr; else_branch: expr }
   | Apply of { fn: expr; args: expr list }
   | Promise of { ty: primitive_ty }
-  | Write of { promiseStar: expr; newValue: expr }
+  | Write of { promiseStar: expr; newValue: expr; unsafe: bool }
   | Read of { promise: expr }
   | Async of { application: expr }
   | For of { name: string; first: expr; last: expr; forBody: expr }
@@ -44,8 +44,9 @@ let rec string_of_expr = function
     string_of_expr fn ^ "(" ^ (List.fold_right (fun arg str -> string_of_expr arg ^ ", " ^ str) args "") ^ ")"
   | Promise { ty } ->
     "promise " ^ string_of_ty (ty :> ty)
-  | Write { promiseStar; newValue } ->
-    string_of_expr promiseStar ^ " <- " ^ string_of_expr newValue
+  | Write { promiseStar; newValue; unsafe } ->
+    let arrow = if unsafe then " <~ " else " <- " in
+    string_of_expr promiseStar ^ arrow ^ string_of_expr newValue
   | Read { promise } ->
     "?" ^ string_of_expr promise
   | Async { application } ->
