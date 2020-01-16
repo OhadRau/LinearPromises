@@ -45,6 +45,10 @@ let () =
       print_endline "---------------" in
     List.iter typecheck_and_print program.funcs;
     let javaProgram = JavaCG.emit_program program in
-    print_endline javaProgram in
+    print_endline javaProgram;
+    let javaFilename = program.programName ^ ".java" in
+    let oc = open_out javaFilename in
+    output_string oc javaProgram;
+    close_out oc in
 
   read_file eval (if Array.length Sys.argv > 1 then Sys.argv.(1) else "example.txt")
