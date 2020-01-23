@@ -101,8 +101,69 @@ let emit_fun { funcName; retType; params; expr } =
 |}
   (java_type retType) funcName (emit_params params) (emit expr)
 
-let emit_program { programName; funcs; types = _types } =
-  let functions =
+let emit_fields fields =
+  let java_field (name, ty) =
+    Printf.sprintf "    public %s %s;"
+      (java_type ty) name in
+  List.map java_field fields |> String.concat "\n"
+
+let emit_constructor className fields =
+  let java_param (name, ty) =
+    Printf.sprintf "%s %s" (java_type ty) name
+  and java_assign (name, _) =
+    Printf.sprintf "      this.%s = %s;" name name in
+  let params = List.map java_param fields |> String.concat ", "
+  and assignments = List.map java_assign fields |> String.concat "\n" in
+  Printf.sprintf {|
+    public %s(%s) {
+%s
+    }
+|}
+    className params assignments
+
+let emit_case_classes baseClass cases =
+  let java_case_class (name, params) =
+    let named_fields =
+      List.mapi (fun i ty -> (Printf.sprintf "_%d" i, ty)) params in
+    let field_decls = emit_fields named_fields
+    and constructor = emit_constructor name named_fields in
+    Printf.sprintf {|
+  public static class %s extends %s {
+    // public members
+%s
+
+    // constructor
+%s
+  }
+|}
+      name baseClass field_decls constructor in
+  List.map java_case_class cases |> String.concat "\n"
+
+let emit_type { typeName; typeDefn } = match typeDefn with
+  | Record fields ->
+    Printf.sprintf {|
+  public static class %s extends ThreadLockedObject {
+    // public members
+%s
+
+    // constructor
+%s
+  }
+|}
+    typeName (emit_fields fields) (emit_constructor typeName fields)
+  | Union cases ->
+    Printf.sprintf {|
+  // union base class
+  public static abstract class %s extends ThreadLockedObject {}
+  // union case classes
+  %s
+|}
+    typeName (emit_case_classes typeName cases)
+
+let emit_program { programName; funcs; types } =
+  let types =
+    List.map emit_type types |> String.concat "\n"
+  and functions =
     List.map emit_fun funcs |> String.concat "\n" in
   Printf.sprintf {|
 import lang.promises.*;
@@ -110,6 +171,10 @@ import lang.promises.*;
 public class %s {
   private static PromiseRuntime $_rt;
 
+// types
+%s
+
+// functions
 %s
 
   public static <T> Unit unsafeWrite(Promise<T> p, T v) {
@@ -123,4 +188,4 @@ public class %s {
   }
 }
 |}
-  programName functions
+  programName types functions
