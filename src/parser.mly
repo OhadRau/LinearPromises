@@ -27,6 +27,10 @@
 %token EQUAL
 %token LEFT_PAREN
 %token RIGHT_PAREN
+%token LEFT_BRACKET
+%token RIGHT_BRACKET
+%token LEFT_BRACE
+%token RIGHT_BRACE
 %token COMMA
 %token STAR
 %token COLON
@@ -76,13 +80,9 @@ record_fields:
 union_cases:
   |
     { [] }
-  | name = IDENT
-    { [(name, [])] }
-  | name = IDENT; LEFT_PAREN; tys = type_args; RIGHT_PAREN
+  | name = IDENT; LEFT_BRACKET; tys = type_args; RIGHT_BRACKET
     { [(name, tys)] }
-  | name = IDENT; SEMICOLON; rest = union_cases
-    { (name, [])::rest }
-  | name = IDENT; LEFT_PAREN; tys = type_args; RIGHT_PAREN; SEMICOLON; rest = union_cases
+  | name = IDENT; LEFT_BRACKET; tys = type_args; RIGHT_BRACKET; SEMICOLON; rest = union_cases
     { (name, tys)::rest }
 ;
 
@@ -135,6 +135,10 @@ expr:
     { If { condition; then_branch; else_branch } }
   | fn = expr; LEFT_PAREN; args = args; RIGHT_PAREN
     { Apply { fn; args } }
+  | ctor = IDENT; LEFT_BRACKET; args = args; RIGHT_BRACKET
+    { ConstructUnion { unionCtor=ctor; unionArgs=args } }
+  | ctor = IDENT; LEFT_BRACE; args = named_args; RIGHT_BRACE
+    { ConstructRecord { recordCtor=ctor; recordArgs=args } }
   | PROMISE; ty = primitive_type
     { Promise { ty } }
   | promiseStar = expr; LEFT_ARROW; newValue = expr
@@ -166,4 +170,13 @@ args:
     { [e] }
   | e = expr; COMMA; rest = args
     { e::rest }
+;
+
+named_args:
+  |
+    { [] }
+  | id = IDENT; EQUAL; e = expr
+    { [(id, e)] }
+  | id = IDENT; EQUAL; e = expr; COMMA; rest = named_args
+    { (id, e)::rest }
 ;

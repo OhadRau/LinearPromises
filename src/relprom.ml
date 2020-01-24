@@ -37,13 +37,13 @@ let () =
     let gamma = Env.empty |> Env.add "unsafeWrite" (`Function ([`Promise `Int; `Int], `Unit))
                           |> Env.add "f" (`Function ([`PromiseStar `Int], `Unit))
                           |> load_env program.funcs in
-    let typecheck_and_print func =
+    let typecheck_and_print types func =
       print_endline (string_of_expr func.expr);
       print_endline "---------------";
-      let ty = typecheck_fn gamma func in
+      let ty = typecheck_fn types gamma func in
       print_endline (func.funcName ^ ": " ^ string_of_ty ty);
       print_endline "---------------" in
-    List.iter typecheck_and_print program.funcs;
+    List.iter (typecheck_and_print program.types) program.funcs;
     let javaProgram = JavaCG.emit_program program in
     print_endline javaProgram;
     let javaFilename = program.programName ^ ".java" in

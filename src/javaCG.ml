@@ -27,64 +27,79 @@ let rec java_type = function
   | `PromiseStar k -> Printf.sprintf "Promise<%s>" (java_type (k :> ty))
   | `Function (_, _) -> failwith "Cannot create temp function variable"
 
-let rec emit_args = function
+let rec emit_args userTypes = function
   | [] -> ""
-  | [arg] -> emit ~in_expr:true arg
+  | [arg] -> emit userTypes ~in_expr:true arg
   | arg::args ->
     Printf.sprintf "%s, %s"
-      (emit ~in_expr:true arg) (emit_args args)
+      (emit userTypes ~in_expr:true arg) (emit_args userTypes args)
 
-and emit ?(in_expr=false) = function 
+and emit userTypes ?(in_expr=false) = function 
   | Let { id = "_"; value = (For _) as loop; body; _ }
   | Let { id = "_"; value = (While _) as loop; body; _ } ->
     Printf.sprintf "%s %s"
-      (emit ~in_expr loop) (emit body)
+      (emit userTypes ~in_expr loop) (emit userTypes body)
   | Let { id; annot; value; body } ->
     let ty = java_type annot in
     Printf.sprintf "%s %s = %s; %s"
-      ty (make_id id) (* = *) (emit ~in_expr:true value) (* ; *) (emit body)
+      ty (make_id id) (* = *) (emit userTypes ~in_expr:true value) (* ; *) (emit userTypes body)
   | If { condition; then_branch; else_branch } when in_expr ->
     Printf.sprintf "((%s) ? (%s) : (%s))"
-      (emit ~in_expr condition) (emit ~in_expr then_branch) (emit ~in_expr else_branch)
+      (emit userTypes ~in_expr condition) (emit userTypes ~in_expr then_branch) (emit userTypes ~in_expr else_branch)
   | If { condition; then_branch; else_branch } ->
     Printf.sprintf "if (%s) { %s } else { %s }"
-      (emit ~in_expr:true condition) (emit then_branch) (emit else_branch)
+      (emit userTypes ~in_expr:true condition) (emit userTypes then_branch) (emit userTypes else_branch)
   | For _ | While _ when in_expr ->
     failwith "Cannot use for/while loop inside of an expression"
   | For { name; first; last; forBody } ->
     (* TODO: What if last < first? What if type(first) != int? *)
     Printf.sprintf "for (int %s = %s; %s < %s; %s++) { %s }"
-      name (* = *) (emit ~in_expr:true first) (* ; *)
-      name (* < *) (emit ~in_expr:true last)  (* ; *)
+      name (* = *) (emit userTypes ~in_expr:true first) (* ; *)
+      name (* < *) (emit userTypes ~in_expr:true last)  (* ; *)
       name (* ++ *)
-      (emit forBody)
+      (emit userTypes forBody)
   | While { whileCond; whileBody } ->
     Printf.sprintf "while (%s) { %s }"
-    (emit ~in_expr:true whileCond) (emit whileBody)
+    (emit userTypes ~in_expr:true whileCond) (emit userTypes whileBody)
   (* TODO: How do we get the final ; + return when it's needed?
      This works ok for now because of our functional AST but e.g. we can't do
      something like: while (true) { ... }; return a; *)
   | e when not in_expr ->
-    Printf.sprintf "return %s;" (emit ~in_expr:true e)
+    Printf.sprintf "return %s;" (emit userTypes ~in_expr:true e)
   | Variable v -> v
   | Unit -> "Unit.the"
   | Number n -> string_of_int n
   | Boolean b -> string_of_bool b
   | Apply { fn; args } ->
     Printf.sprintf "%s(%s)"
-      (emit ~in_expr:true fn) (emit_args args)
+      (emit userTypes ~in_expr:true fn) (emit_args userTypes args)
+  | ConstructUnion { unionCtor; unionArgs } ->
+    Printf.sprintf "new %s(%s)"
+      unionCtor (emit_args userTypes unionArgs)
+  | ConstructRecord { recordCtor; recordArgs } -> begin
+    let ty = List.find (fun { typeName; _ } -> typeName = recordCtor) userTypes in
+    match ty with
+    | { typeDefn = Record fields; _ } ->
+      let ordered = List.map begin fun (fieldName, _) ->
+        let (_, arg) = List.find (fun (argName, _) -> argName = fieldName) recordArgs in
+        arg
+      end fields in
+      Printf.sprintf "new %s(%s)"
+        recordCtor (emit_args userTypes ordered)
+    | _ -> failwith "Attempted to call record constructor on a union type"
+    end
   | Promise { ty } ->
     let ty' = java_type (ty :> ty) in
     Printf.sprintf "new Promise<%s>()" ty'
   | Write { promiseStar; newValue; _ } ->
     Printf.sprintf "%s.fulfill(%s)"
-      (emit ~in_expr:true promiseStar) (emit ~in_expr:true newValue)
+      (emit userTypes ~in_expr:true promiseStar) (emit userTypes ~in_expr:true newValue)
   | Read { promise } ->
     Printf.sprintf "%s.get()"
-      (emit ~in_expr:true promise)
+      (emit userTypes ~in_expr:true promise)
   | Async { application } ->
     Printf.sprintf "$_rt.async(new AsyncTask(() -> %s))"
-      (emit ~in_expr:true application)
+      (emit userTypes ~in_expr:true application)
 
 let rec emit_params = function
   | [] -> ""
@@ -93,13 +108,13 @@ let rec emit_params = function
     Printf.sprintf "%s %s, %s"
       (java_type ty) (make_id arg) (emit_params args)
 
-let emit_fun { funcName; retType; params; expr } =
+let emit_fun userTypes { funcName; retType; params; expr } =
   Printf.sprintf {|
   public static %s %s(%s) {
     %s
   }
 |}
-  (java_type retType) funcName (emit_params params) (emit expr)
+  (java_type retType) funcName (emit_params params) (emit userTypes expr)
 
 let emit_fields fields =
   let java_field (name, ty) =
@@ -164,7 +179,7 @@ let emit_program { programName; funcs; types } =
   let types =
     List.map emit_type types |> String.concat "\n"
   and functions =
-    List.map emit_fun funcs |> String.concat "\n" in
+    List.map (emit_fun types) funcs |> String.concat "\n" in
   Printf.sprintf {|
 import lang.promises.*;
 

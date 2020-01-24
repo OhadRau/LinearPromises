@@ -9,6 +9,7 @@ module LinEnv = struct
   let print linEnv =
     print_endline @@ to_string linEnv
 end
+
 module Env = struct
   include Map.Make(String)
 
@@ -39,9 +40,9 @@ module Env = struct
     print_endline @@ fold (fun k v result -> k ^ ": " ^ show v ^ "; " ^ result) env ""
 end
 
-(* typecheck : linear -> env -> expr -> (ty * linear * env) *)
+(* typecheck : ty_decl list -> linear -> env -> expr -> (ty * linear * env) *)
 (* TODO: Assert that delta = {} at the end of every program *)
-let rec typecheck linEnv env = function
+let rec typecheck userTypes linEnv env = function
   | Unit -> (`Unit, linEnv, env)
   | Boolean _ -> (`Bool, linEnv, env)
   | Number _ -> (`Int, linEnv, env)
@@ -53,7 +54,7 @@ let rec typecheck linEnv env = function
     if annot = `PromiseStar ty then begin
       let linEnvP = LinEnv.add id linEnv
       and envP = Env.add id annot env in
-      match typecheck linEnvP envP body with
+      match typecheck userTypes linEnvP envP body with
       | (tau', linEnv', _) ->
         let notEliminated = LinEnv.diff linEnv' linEnv in
         if notEliminated = linEnv' then
@@ -62,10 +63,10 @@ let rec typecheck linEnv env = function
     end else
       failwith ("Unmatched promise type in let expression: Got " ^ string_of_ty (`PromiseStar ty) ^ ", expected " ^ string_of_ty annot)
   | Let { id; annot; value; body } ->
-    let (ty, linEnv0, env0) = typecheck linEnv env value in
+    let (ty, linEnv0, env0) = typecheck userTypes linEnv env value in
     if ty = annot then begin
       let envId = Env.add id annot env0 in
-      let (tau', linEnv1, env1) = typecheck linEnv0 envId body in
+      let (tau', linEnv1, env1) = typecheck userTypes linEnv0 envId body in
       (tau', LinEnv.inter linEnv0 linEnv1, Env.inter env0 env1)
     end else
       failwith ("Unmatched type in let expression: Got " ^ string_of_ty ty ^ ", expected " ^ string_of_ty annot)
@@ -75,7 +76,7 @@ let rec typecheck linEnv env = function
       | [], [] -> ([], linEnv', env')
       | [], _ | _, [] -> failwith "Type mismatch in function application: number of parameters differed between expected and actual"
       | expected_ty::prest, (Variable v as arg)::arest ->
-        begin match expected_ty, typecheck linEnv' env' arg with
+        begin match expected_ty, typecheck userTypes linEnv' env' arg with
         | `PromiseStar tau, (`PromiseStar tau', linEnvN, envN) when tau = tau' ->
           evalArgs (LinEnv.remove v linEnvN) (Env.replace v (`Promise tau) envN) prest arest
         | `Promise tau, (`PromiseStar tau', linEnvN, envN) when tau = tau' ->
@@ -90,7 +91,7 @@ let rec typecheck linEnv env = function
           end
         end
       | expected_ty::prest, expr::arest ->
-        let (t, linEnvN, envN) = typecheck linEnv' env' expr in
+        let (t, linEnvN, envN) = typecheck userTypes linEnv' env' expr in
         if t = expected_ty then
           evalArgs linEnvN envN prest arest
         else begin
@@ -100,14 +101,52 @@ let rec typecheck linEnv env = function
           failwith "Type mismatch in function application"
         end
       end in
-    match typecheck linEnv env fn with
+    match typecheck userTypes linEnv env fn with
     | (`Function (argTypes, returnType), _, _) ->
       let (_, linEnv', env') = evalArgs linEnv env argTypes args in
       (returnType, linEnv', env')
     | _ -> failwith "Cannot call a non-function"
     end
+  | ConstructUnion { unionCtor; unionArgs } ->
+    let ty = List.find_opt begin function
+      | { typeDefn = Union cases; _ }
+        when List.exists (fun (caseName, _) -> caseName = unionCtor) cases -> true
+      | _ -> false
+    end userTypes in
+    begin match ty with
+      | Some { typeName; typeDefn = Union cases } -> begin
+        let _, params = List.find (fun (caseName, _) -> caseName = unionCtor) cases in
+        let argMatches arg expected =
+          let (actual_ty, _, _) = typecheck userTypes linEnv env arg in
+          expected = actual_ty in
+        if List.for_all2 argMatches unionArgs params then
+          (`Custom typeName, linEnv, env)
+        else failwith ("Union constructor " ^ unionCtor ^ " applied to invalid arguments")
+      end
+      | _ -> failwith ("Cannot construct value with union constructor " ^ unionCtor)
+    end
+  | ConstructRecord { recordCtor; recordArgs } ->
+    let ty = List.find_opt begin function
+      | { typeName; _ } when typeName = recordCtor -> true
+      | _ -> false
+    end userTypes in
+    begin match ty with
+      | Some { typeName; typeDefn = Record fields } -> begin
+        let fieldsSorted =
+          List.sort (fun (name1, _) (name2, _) -> compare name1 name2) fields
+        and argsSorted =
+          List.sort (fun (name1, _) (name2, _) -> compare name1 name2) recordArgs in
+        let argMatches (argName, arg) (expectedName, expected_ty) =
+          let (actual_ty, _, _) = typecheck userTypes linEnv env arg in
+          expected_ty = actual_ty && argName = expectedName in
+        if List.for_all2 argMatches argsSorted fieldsSorted then
+          (`Custom typeName, linEnv, env)
+        else failwith ("Union constructor " ^ recordCtor ^ " applied to invalid arguments")
+      end
+      | _ -> failwith ("Cannot construct value with union constructor " ^ recordCtor)
+    end
   | Write { promiseStar = Variable p; newValue; unsafe } -> begin
-    let (ty, _, _) = typecheck linEnv env newValue in
+    let (ty, _, _) = typecheck userTypes linEnv env newValue in
     if Env.mem p env then
       match Env.find p env with
       | `PromiseStar tau when ty = (tau :> ty) ->
@@ -120,17 +159,17 @@ let rec typecheck linEnv env = function
   end
   | Write _ -> failwith "Write location is not an identifier"
   | Read { promise } -> begin
-    match typecheck linEnv env promise with
+    match typecheck userTypes linEnv env promise with
     | (`PromiseStar tau, linEnv', env')
     | (`Promise tau, linEnv', env') ->
       ((tau :> ty), linEnv', env')
     | _ -> failwith "Read location is not a promise"
   end
   | If { condition; then_branch; else_branch } -> begin
-    match typecheck linEnv env condition with
+    match typecheck userTypes linEnv env condition with
     | (`Bool, _, _) ->
-      let (thenType, thenLinEnv, thenEnv) = typecheck linEnv env then_branch
-      and (elseType, elseLinEnv, _) = typecheck linEnv env else_branch in
+      let (thenType, thenLinEnv, thenEnv) = typecheck userTypes linEnv env then_branch
+      and (elseType, elseLinEnv, _) = typecheck userTypes linEnv env else_branch in
       if thenType <> elseType then
         failwith "Type mismatch between conditional branches"
       else if thenLinEnv <> elseLinEnv then
@@ -143,26 +182,26 @@ let rec typecheck linEnv env = function
     | _ -> failwith "If condition is not a boolean"
   end
   | Async { application } ->
-    let (_, linEnv', env') = typecheck linEnv env application in
+    let (_, linEnv', env') = typecheck userTypes linEnv env application in
     (`Unit, linEnv', env')
   | For { name; first; last; forBody } ->
-    let (firstTy, _, _) = typecheck linEnv env first
-    and (lastTy, _, _) = typecheck linEnv env last in
+    let (firstTy, _, _) = typecheck userTypes linEnv env first
+    and (lastTy, _, _) = typecheck userTypes linEnv env last in
     if firstTy <> `Int || lastTy <> `Int then
       failwith "For loop bounds must be integers"
     else begin
       let envName = Env.add name `Int env in
-      match typecheck LinEnv.empty envName forBody with
+      match typecheck userTypes LinEnv.empty envName forBody with
       | (ty, linEnv', _) when linEnv' = LinEnv.empty ->
         (ty, linEnv, env)
       | _ -> failwith "Unused promises in for loop"
     end
   | While { whileCond; whileBody } ->
-    let (condTy, _, _) = typecheck linEnv env whileCond in
+    let (condTy, _, _) = typecheck userTypes linEnv env whileCond in
     if condTy <> `Bool then
       failwith "While condition must be a bool"
     else begin
-      match typecheck LinEnv.empty env whileBody with
+      match typecheck userTypes LinEnv.empty env whileBody with
       | (ty, linEnv', _) when linEnv' = LinEnv.empty ->
         (ty, linEnv, env)
       | _ -> failwith "Unused promises in while loop"
@@ -185,10 +224,10 @@ let rec load_params args linEnv env = match args with
     let env' = Env.add name ty env in
     load_params params linEnv env'
 
-let typecheck_fn env = function
+let typecheck_fn userTypes env = function
   | { funcName; retType; params; expr } ->
     let linEnv', env' = load_params params (LinEnv.empty) env in
-    let (ty, linEnv'', _) = typecheck linEnv' env' expr in
+    let (ty, linEnv'', _) = typecheck userTypes linEnv' env' expr in
     if LinEnv.empty <> linEnv'' then
       failwith "Function must eliminate all linear variables"
     else if ty <> retType then

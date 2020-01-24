@@ -63,6 +63,8 @@ type expr =
   | Let of { id: string; annot: ty; value: expr; body: expr }
   | If of { condition: expr; then_branch: expr; else_branch: expr }
   | Apply of { fn: expr; args: expr list }
+  | ConstructUnion of { unionCtor: string; unionArgs: expr list }
+  | ConstructRecord of { recordCtor: string; recordArgs: (string * expr) list }
   | Promise of { ty: primitive_ty }
   | Write of { promiseStar: expr; newValue: expr; unsafe: bool }
   | Read of { promise: expr }
@@ -81,6 +83,10 @@ let rec string_of_expr = function
     "if " ^ string_of_expr condition ^ " then " ^ string_of_expr then_branch ^ " else " ^ string_of_expr else_branch ^ " end"
   | Apply { fn; args } ->
     string_of_expr fn ^ "(" ^ (List.fold_right (fun arg str -> string_of_expr arg ^ ", " ^ str) args "") ^ ")"
+  | ConstructUnion { unionCtor; unionArgs } ->
+    unionCtor ^ "[" ^ (List.fold_right (fun arg str -> string_of_expr arg ^ ", " ^ str) unionArgs "") ^ "]"
+  | ConstructRecord { recordCtor; recordArgs } ->
+    recordCtor ^ "{" ^ (List.fold_right (fun (name, arg) str -> name ^ "=" ^ string_of_expr arg ^ ", " ^ str) recordArgs "") ^ "}"
   | Promise { ty } ->
     "promise " ^ string_of_ty (ty :> ty)
   | Write { promiseStar; newValue; unsafe } ->

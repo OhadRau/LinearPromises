@@ -1,6 +1,6 @@
 union IntList begin
-  Empty;
-  Node(Int, IntList)
+  Empty[];
+  Node[Int, IntList]
 end
 
 record PairOfLists begin
@@ -9,5 +9,7 @@ record PairOfLists begin
 end
 
 func main(): Unit begin
+  let u: IntList = Empty[] in
+  let p: PairOfLists = PairOfLists { left=u, right=u } in
   ()
 end
