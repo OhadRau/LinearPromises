@@ -136,6 +136,15 @@ let emit_constructor className fields =
 |}
     className params assignments
 
+let emit_match_params cases =
+  let function_type (name, params) =
+    let paramTypes = List.map java_type params in
+    let functionArgs = "_R"::paramTypes in
+    Printf.sprintf "Function<%s> %s"
+      (String.concat ", " functionArgs)
+      ("_case" ^ name) in
+  List.map function_type cases |> String.concat ", "
+
 let emit_case_classes baseClass cases =
   let java_case_class (name, params) =
     let named_fields =
@@ -149,9 +158,17 @@ let emit_case_classes baseClass cases =
 
     // constructor
 %s
+
+    // match method
+    public<_R> _R match(%s) {
+      return %s(%s);
+    }
   }
 |}
-      name baseClass field_decls constructor in
+      name baseClass field_decls constructor
+      (emit_match_params cases)
+      ("_case" ^ name)
+      (named_fields |> List.map fst |> String.concat ", ") in
   List.map java_case_class cases |> String.concat "\n"
 
 let emit_type { typeName; typeDefn } = match typeDefn with
@@ -169,11 +186,15 @@ let emit_type { typeName; typeDefn } = match typeDefn with
   | Union cases ->
     Printf.sprintf {|
   // union base class
-  public static abstract class %s extends ThreadLockedObject {}
+  public static abstract class %s extends ThreadLockedObject {
+    public<_R> _R match(%s);
+  }
   // union case classes
   %s
 |}
-    typeName (emit_case_classes typeName cases)
+    typeName
+    (emit_match_params cases)
+    (emit_case_classes typeName cases)
 
 let emit_program { programName; funcs; types } =
   let types =
