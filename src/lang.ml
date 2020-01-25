@@ -65,6 +65,7 @@ type expr =
   | Apply of { fn: expr; args: expr list }
   | ConstructUnion of { unionCtor: string; unionArgs: expr list }
   | ConstructRecord of { recordCtor: string; recordArgs: (string * expr) list }
+  | RecordAccess of { record: expr; field: string }
   | Promise of { ty: primitive_ty }
   | Write of { promiseStar: expr; newValue: expr; unsafe: bool }
   | Read of { promise: expr }
@@ -87,6 +88,8 @@ let rec string_of_expr = function
     unionCtor ^ "[" ^ (List.fold_right (fun arg str -> string_of_expr arg ^ ", " ^ str) unionArgs "") ^ "]"
   | ConstructRecord { recordCtor; recordArgs } ->
     recordCtor ^ "{" ^ (List.fold_right (fun (name, arg) str -> name ^ "=" ^ string_of_expr arg ^ ", " ^ str) recordArgs "") ^ "}"
+  | RecordAccess { record; field } ->
+    (string_of_expr record) ^ "." ^ field
   | Promise { ty } ->
     "promise " ^ string_of_ty (ty :> ty)
   | Write { promiseStar; newValue; unsafe } ->

@@ -88,6 +88,9 @@ and emit userTypes ?(in_expr=false) = function
         recordCtor (emit_args userTypes ordered)
     | _ -> failwith "Attempted to call record constructor on a union type"
     end
+  | RecordAccess { record; field } ->
+    Printf.sprintf "(%s).%s"
+      (emit userTypes ~in_expr:true record) field
   | Promise { ty } ->
     let ty' = java_type (ty :> ty) in
     Printf.sprintf "new Promise<%s>()" ty'

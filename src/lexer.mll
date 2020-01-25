@@ -52,6 +52,7 @@ rule read = parse
   | id as id  { IDENT id }
 
   | '='       { EQUAL }
+  | '.'       { DOT }
   | '('       { LEFT_PAREN }
   | ')'       { RIGHT_PAREN }
   | '['       { LEFT_BRACKET }

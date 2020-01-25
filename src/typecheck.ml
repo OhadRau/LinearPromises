@@ -40,6 +40,14 @@ module Env = struct
     print_endline @@ fold (fun k v result -> k ^ ": " ^ show v ^ "; " ^ result) env ""
 end
 
+let resolveUserType userTypes = function
+  | `Custom tyName -> begin
+    match List.find_opt (fun {typeName; _} -> typeName = tyName) userTypes with
+    | Some userTy -> userTy
+    | _ -> failwith (tyName ^ " cannot be resolved to a type")
+  end
+  | ty -> failwith (string_of_ty ty ^ " is not a user-defined type")
+
 (* typecheck : ty_decl list -> linear -> env -> expr -> (ty * linear * env) *)
 (* TODO: Assert that delta = {} at the end of every program *)
 let rec typecheck userTypes linEnv env = function
@@ -144,6 +152,15 @@ let rec typecheck userTypes linEnv env = function
         else failwith ("Union constructor " ^ recordCtor ^ " applied to invalid arguments")
       end
       | _ -> failwith ("Cannot construct value with union constructor " ^ recordCtor)
+    end
+  | RecordAccess { record; field } -> begin
+    let (record_ty, linEnv', env') = typecheck userTypes linEnv env record in
+    let record_fields = match resolveUserType userTypes record_ty with
+      | { typeDefn = Record fields; _ } -> fields
+      | _ -> failwith "Cannot access fields of non-record type" in
+    match List.find_opt (fun (name, _) -> name = field) record_fields with
+    | Some (_, ty) -> (ty, linEnv', env')
+    | None -> failwith ("Type " ^ string_of_ty record_ty ^ " has no field " ^ field)
     end
   | Write { promiseStar = Variable p; newValue; unsafe } -> begin
     let (ty, _, _) = typecheck userTypes linEnv env newValue in

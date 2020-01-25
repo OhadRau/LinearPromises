@@ -25,6 +25,7 @@
 %token TYPE_PROMISE
 
 %token EQUAL
+%token DOT
 %token LEFT_PAREN
 %token RIGHT_PAREN
 %token LEFT_BRACKET
@@ -139,6 +140,8 @@ expr:
     { ConstructUnion { unionCtor=ctor; unionArgs=args } }
   | ctor = IDENT; LEFT_BRACE; args = named_args; RIGHT_BRACE
     { ConstructRecord { recordCtor=ctor; recordArgs=args } }
+  | record = expr; DOT; field = IDENT
+    { RecordAccess { record; field } }
   | PROMISE; ty = primitive_type
     { Promise { ty } }
   | promiseStar = expr; LEFT_ARROW; newValue = expr

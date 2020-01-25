@@ -11,5 +11,6 @@ end
 func main(): Unit begin
   let u: IntList = Empty[] in
   let p: PairOfLists = PairOfLists { left=u, right=u } in
+  let v: IntList = p.right in
   ()
 end
