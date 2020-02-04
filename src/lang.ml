@@ -55,13 +55,20 @@ let string_of_ty_decl {typeName; typeDefn} =
     format_union_cases alternatives ^
     "end"
 
-type expr =
+type pattern = {
+  patCtor: string;
+  patArgs: string list;
+  patResult: expr
+}
+
+and expr =
   | Variable of string
   | Unit
   | Number of int
   | Boolean of bool
   | Let of { id: string; annot: ty; value: expr; body: expr }
   | If of { condition: expr; then_branch: expr; else_branch: expr }
+  | Match of { matchValue: expr; matchCases: pattern list }
   | Apply of { fn: expr; args: expr list }
   | ConstructUnion of { unionCtor: string; unionArgs: expr list }
   | ConstructRecord of { recordCtor: string; recordArgs: (string * expr) list }
@@ -82,6 +89,8 @@ let rec string_of_expr = function
     "let " ^ id ^ ": " ^ string_of_ty annot ^ " = " ^ string_of_expr value ^ " in " ^ string_of_expr body
   | If { condition; then_branch; else_branch } ->
     "if " ^ string_of_expr condition ^ " then " ^ string_of_expr then_branch ^ " else " ^ string_of_expr else_branch ^ " end"
+  | Match { matchValue; matchCases } ->
+    "match " ^ string_of_expr matchValue ^ " begin " ^ string_of_match_cases matchCases ^ " end"
   | Apply { fn; args } ->
     string_of_expr fn ^ "(" ^ (List.fold_right (fun arg str -> string_of_expr arg ^ ", " ^ str) args "") ^ ")"
   | ConstructUnion { unionCtor; unionArgs } ->
@@ -103,6 +112,11 @@ let rec string_of_expr = function
     "for " ^ name ^ " = " ^ string_of_expr first ^ " to " ^ string_of_expr last ^ " begin " ^ string_of_expr forBody ^ " end"
   | While { whileCond; whileBody } ->
     "while " ^ string_of_expr whileCond ^ " begin " ^ string_of_expr whileBody ^ " end"
+
+and string_of_match_cases cases =
+  let string_of_case { patCtor; patArgs; patResult } =
+    patCtor ^ "[" ^ (String.concat ", " patArgs) ^ "] -> " ^ string_of_expr patResult in
+  List.map string_of_case cases |> String.concat " "
 
 type func = {
   funcName: string;

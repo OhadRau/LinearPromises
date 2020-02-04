@@ -198,6 +198,45 @@ let rec typecheck userTypes linEnv env = function
         (thenType, thenLinEnv, Env.cover linEnv thenLinEnv env thenEnv)
     | _ -> failwith "If condition is not a boolean"
   end
+  | Match { matchValue; matchCases } -> begin
+    let (val_ty, linEnv', env') = typecheck userTypes linEnv env matchValue in
+    let ty_name = match val_ty with
+      | `Custom name -> name
+      | _ -> failwith "Cannot match against a primitive type" in
+    let ty_defn = match List.find (fun {typeName; _} -> typeName = ty_name) userTypes with
+      | { typeDefn = Union cases; _ } -> cases
+      | _ -> failwith "Must match against a union type" in
+    (* Check:
+         1. All patterns: val_ty
+         2. All val_ty's included in patterns
+         3. All branches have same result type
+    *)
+    let ctorsExpected = List.map (fun (ctor, _) -> ctor) ty_defn |> List.sort String.compare
+    and ctorsApplied = List.map (fun { patCtor; _ } -> patCtor) matchCases |> List.sort String.compare in
+    let rec check_branches = function
+      | {patCtor; patArgs; patResult}::rest ->
+        let (_, ctor_arg_types) = List.find (fun (ctor, _) -> ctor = patCtor) ty_defn in
+        let args_and_types = List.map2 (fun l r -> (l, r)) patArgs ctor_arg_types in
+        let (linEnv'', env'') = List.fold_left begin fun (linEnv, env) (arg, ty) ->
+          let env' = Env.add arg ty env
+          and linEnv' = match ty with
+            | `PromiseStar _ -> LinEnv.add arg linEnv
+            | _ -> linEnv in
+          (linEnv', env')
+        end (linEnv', env') args_and_types in
+        let (result_ty, linEnv''', env''') = typecheck userTypes linEnv'' env'' patResult in
+        if linEnv''' = LinEnv.empty then
+          let result = (result_ty, linEnv''', Env.cover linEnv' linEnv''' env' env''') in
+          if rest = [] || check_branches rest = result then
+            result
+          else failwith "Match expression branches must have the same type"
+        else failwith "Leftover linear variable in match branch"
+      | [] -> failwith "Match expression must contain at least one branch" in
+    let (result_ty, linEnv'', env'') = check_branches matchCases in
+    if ctorsApplied = ctorsExpected then
+      (result_ty, linEnv'', env'')
+    else failwith "Match cases must exactly match all union cases"
+  end
   | Async { application } ->
     let (_, linEnv', env') = typecheck userTypes linEnv env application in
     (`Unit, linEnv', env')

@@ -12,5 +12,8 @@ func main(): Unit begin
   let u: IntList = Empty[] in
   let p: PairOfLists = PairOfLists { left=u, right=u } in
   let v: IntList = p.right in
-  ()
+  match v begin
+    Empty[] -> ()
+    Node[a, b] -> ()
+  end
 end

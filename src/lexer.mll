@@ -36,6 +36,7 @@ rule read = parse
   | "let"     { LET }
   | "in"      { IN }
   | "if"      { IF }
+  | "match"   { MATCH }
   | "then"    { THEN }
   | "else"    { ELSE }
   | "for"     { FOR }
@@ -63,6 +64,7 @@ rule read = parse
   | '*'       { STAR }
   | ':'       { COLON }
   | ';'       { SEMICOLON }
+  | "->"      { RIGHT_ARROW }
   | "<-"      { LEFT_ARROW }
   | "<~"      { LEFT_TILDE_ARROW }
 (*  | "->"      { RIGHT_ARROW } *)

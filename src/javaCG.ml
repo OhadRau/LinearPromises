@@ -49,6 +49,8 @@ and emit userTypes ?(in_expr=false) = function
   | If { condition; then_branch; else_branch } ->
     Printf.sprintf "if (%s) { %s } else { %s }"
       (emit userTypes ~in_expr:true condition) (emit userTypes then_branch) (emit userTypes else_branch)
+  (* FIXME: WE NEED TO HAVE THE SORTED CASES HERE! SINCE WE DON'T KNOW THE TYPE WE CAN'T RE-SORT HERE! *)
+  | Match _ -> failwith "Match is not yet implemented"
   | For _ | While _ when in_expr ->
     failwith "Cannot use for/while loop inside of an expression"
   | For { name; first; last; forBody } ->

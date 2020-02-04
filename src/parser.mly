@@ -11,6 +11,7 @@
 %token LET
 %token IN
 %token IF
+%token MATCH
 %token THEN
 %token ELSE
 %token FOR
@@ -36,6 +37,7 @@
 %token STAR
 %token COLON
 %token SEMICOLON
+%token RIGHT_ARROW
 %token LEFT_ARROW
 %token LEFT_TILDE_ARROW
 %token QUESTION
@@ -46,6 +48,10 @@
 %nonassoc ASYNC
 %nonassoc QUESTION LEFT_ARROW LEFT_TILDE_ARROW
 %nonassoc LEFT_PAREN
+
+%{
+  open Lang
+%}
 
 %start<Lang.program> program
 %%
@@ -64,9 +70,9 @@ func:
 
 type_decl:
   | RECORD; typeName = IDENT; BEGIN; fields = record_fields; END
-    { { Lang.typeName; typeDefn = Record fields } }
+    { { typeName; typeDefn = Record fields } }
   | UNION; typeName = IDENT; BEGIN; cases = union_cases; END
-    { { Lang.typeName; typeDefn = Union cases } }
+    { { typeName; typeDefn = Union cases } }
 ;
 
 record_fields:
@@ -132,6 +138,8 @@ expr:
     { e }
   | LET; id = IDENT; COLON; annot = type_expr; EQUAL; value = expr; IN; body = expr
     { Let { id; annot; value; body } }
+  | MATCH; matchValue = expr; BEGIN; matchCases = match_cases; END
+    { Match { matchValue; matchCases } }
   | IF; condition = expr; THEN; then_branch = expr; ELSE; else_branch = expr; END
     { If { condition; then_branch; else_branch } }
   | fn = expr; LEFT_PAREN; args = args; RIGHT_PAREN
@@ -166,6 +174,13 @@ expr:
     { Let { id="_"; annot=`Unit; value=left; body=right } }
 ;
 
+match_cases:
+  | patCtor = IDENT; LEFT_BRACKET; patArgs = pattern_args; RIGHT_BRACKET; RIGHT_ARROW; patResult = expr
+    { [{ patCtor; patArgs; patResult }] }
+  | patCtor = IDENT; LEFT_BRACKET; patArgs = pattern_args; RIGHT_BRACKET; RIGHT_ARROW; patResult = expr; rest = match_cases
+    { { patCtor; patArgs; patResult }::rest }
+;
+
 args:
   |
     { [] }
@@ -173,6 +188,15 @@ args:
     { [e] }
   | e = expr; COMMA; rest = args
     { e::rest }
+;
+
+pattern_args:
+  |
+    { [] }
+  | id = IDENT
+    { [id] }
+  | id = IDENT; COMMA; rest = pattern_args
+    { id::rest }
 ;
 
 named_args:
