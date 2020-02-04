@@ -49,29 +49,6 @@ and emit userTypes ?(in_expr=false) = function
   | If { condition; then_branch; else_branch } ->
     Printf.sprintf "if (%s) { %s } else { %s }"
       (emit userTypes ~in_expr:true condition) (emit userTypes then_branch) (emit userTypes else_branch)
-  | Match { matchValue; matchCases } -> begin
-    let firstCtor = match matchCases with
-      | {patCtor; _}::_ -> patCtor
-      | _ -> failwith "Match expr must contain at least one branch" in
-    let matchType = List.find begin function
-      | {typeDefn=Union cases; _}
-        when List.exists (fun (caseName, _) -> caseName = firstCtor) cases -> true
-      | _ -> false
-    end userTypes in
-    let expectedCases = match matchType.typeDefn with
-      | Union cases -> cases
-      | _ -> failwith "Match expr must match against a union" in
-    let ordered = List.map begin fun (ctorName, _) ->
-      let {patArgs; patResult; _} = List.find (fun {patCtor; _} -> ctorName = patCtor) matchCases in
-      (patArgs, patResult)
-    end expectedCases in
-    let branches = List.map begin fun (args, result) ->
-      Printf.sprintf "(%s) -> %s"
-        (String.concat ", " args) (emit userTypes ~in_expr:true result)
-    end ordered |> String.concat ", " in
-    Printf.sprintf "(%s).match(%s)%s"
-      (emit userTypes ~in_expr:true matchValue) branches (if in_expr then "" else ";")
-  end
   | For _ | While _ when in_expr ->
     failwith "Cannot use for/while loop inside of an expression"
   | For { name; first; last; forBody } ->
@@ -114,6 +91,29 @@ and emit userTypes ?(in_expr=false) = function
   | RecordAccess { record; field } ->
     Printf.sprintf "(%s).%s"
       (emit userTypes ~in_expr:true record) field
+  | Match { matchValue; matchCases } -> begin
+    let firstCtor = match matchCases with
+      | {patCtor; _}::_ -> patCtor
+      | _ -> failwith "Match expr must contain at least one branch" in
+    let matchType = List.find begin function
+      | {typeDefn=Union cases; _}
+        when List.exists (fun (caseName, _) -> caseName = firstCtor) cases -> true
+      | _ -> false
+    end userTypes in
+    let expectedCases = match matchType.typeDefn with
+      | Union cases -> cases
+      | _ -> failwith "Match expr must match against a union" in
+    let ordered = List.map begin fun (ctorName, _) ->
+      let {patArgs; patResult; _} = List.find (fun {patCtor; _} -> ctorName = patCtor) matchCases in
+      (patArgs, patResult)
+    end expectedCases in
+    let branches = List.map begin fun (args, result) ->
+      Printf.sprintf "(%s) -> {%s}"
+        (String.concat ", " args) (emit userTypes ~in_expr:false result)
+    end ordered |> String.concat ", " in
+    Printf.sprintf "(%s).match(%s)%s"
+      (emit userTypes ~in_expr:true matchValue) branches (if in_expr then "" else ";")
+  end
   | Promise { ty } ->
     let ty' = java_type (ty :> ty) in
     Printf.sprintf "new Promise<%s>()" ty'

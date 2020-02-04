@@ -8,12 +8,17 @@ record PairOfLists begin
   right: IntList
 end
 
+func eq(a: Int, b: Int): Bool begin
+  true
+end
+
 func main(): Unit begin
   let u: IntList = Empty[] in
   let p: PairOfLists = PairOfLists { left=u, right=u } in
   let v: IntList = p.right in
   match v begin
     Empty[] -> ()
-    Node[a, b] -> ()
+    Node[a, b] ->
+      if eq(a, 5) then () else () end
   end
 end
