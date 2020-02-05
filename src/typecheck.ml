@@ -149,7 +149,7 @@ let rec typecheck userTypes linEnv env = function
           expected_ty = actual_ty && argName = expectedName in
         if List.for_all2 argMatches argsSorted fieldsSorted then
           (`Custom typeName, linEnv, env)
-        else failwith ("Union constructor " ^ recordCtor ^ " applied to invalid arguments")
+        else failwith ("Record constructor " ^ recordCtor ^ " applied to invalid arguments")
       end
       | _ -> failwith ("Cannot construct value with union constructor " ^ recordCtor)
     end
