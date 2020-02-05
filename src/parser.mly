@@ -47,6 +47,7 @@
 %right SEMICOLON IN
 %nonassoc ASYNC
 %nonassoc QUESTION LEFT_ARROW LEFT_TILDE_ARROW
+%nonassoc DOT
 %nonassoc LEFT_PAREN
 
 %{

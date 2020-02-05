@@ -1,5 +1,7 @@
 (ocamllex lexer)
-(menhir (modules parser))
+(menhir
+  (flags --explain)
+  (modules parser))
 
 (executable
   (name relprom)
