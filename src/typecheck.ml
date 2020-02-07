@@ -48,6 +48,34 @@ let resolveUserType userTypes = function
   end
   | ty -> failwith (string_of_ty ty ^ " is not a user-defined type")
 
+(* Liftable decides whether a *-value can be lifted to top-level in a type; if a type
+   contains (or can contain) a *-value, then it will be liftable. Primitive types are
+   not liftable and Promise*(_) is automatically liftable since it's a *-value. *)
+let rec liftable_ userTypes history = function
+  | `Int | `Bool | `Unit -> false
+  | `Promise t -> liftable userTypes (t :> ty)
+  | `Custom c when List.mem c history -> false
+  | `Custom c -> begin
+    let resolved = resolveUserType userTypes (`Custom c) in
+    let history = c::history in
+    match resolved.typeDefn with
+    | Record fields -> List.exists (fun (_, ty) -> liftable userTypes ~history ty) fields
+    | Union cases -> List.exists (fun (_, args) -> List.exists (liftable userTypes ~history) args) cases
+  end
+  | `PromiseStar _ -> true
+  | `Function _ -> failwith "Function lifting is not currently supported"
+
+and liftable =
+  let table = Hashtbl.create 1000 in
+  fun userTypes ?(history=[]) ty ->
+    if Hashtbl.mem table ty then
+      Hashtbl.find table ty
+    else begin
+      let result = liftable_ userTypes history ty in
+      Hashtbl.add table ty result;
+      result
+    end
+
 (* typecheck : ty_decl list -> linear -> env -> expr -> (ty * linear * env) *)
 (* TODO: Assert that delta = {} at the end of every program *)
 let rec typecheck userTypes linEnv env = function
@@ -75,7 +103,10 @@ let rec typecheck userTypes linEnv env = function
     if ty = annot then begin
       let envId = Env.add id annot env0 in
       let (tau', linEnv1, env1) = typecheck userTypes linEnv0 envId body in
-      (tau', LinEnv.inter linEnv0 linEnv1, Env.inter env0 env1)
+      if liftable userTypes annot then
+        (tau', LinEnv.inter linEnv0 linEnv1 |> LinEnv.add id, Env.inter env0 env1)
+      else  
+        (tau', LinEnv.inter linEnv0 linEnv1, Env.inter env0 env1)
     end else
       failwith ("Unmatched type in let expression: Got " ^ string_of_ty ty ^ ", expected " ^ string_of_ty annot)
   | Apply { fn; args } -> begin
@@ -124,11 +155,23 @@ let rec typecheck userTypes linEnv env = function
     begin match ty with
       | Some { typeName; typeDefn = Union cases } -> begin
         let _, params = List.find (fun (caseName, _) -> caseName = unionCtor) cases in
+        (* Kill every liftable value, because they transfer their * to the new value *)
+        let rec collectKills linEnv = begin function
+          | [] -> linEnv
+          | (arg, expected)::rest -> begin
+            match arg with
+            | Variable id when liftable userTypes expected -> collectKills (LinEnv.add id linEnv) rest
+            | _ -> collectKills linEnv rest
+          end
+        end in
+        let kills = collectKills LinEnv.empty (List.map2 (fun a b -> (a, b)) unionArgs params) in
+
         let argMatches arg expected =
           let (actual_ty, _, _) = typecheck userTypes linEnv env arg in
           expected = actual_ty in
         if List.for_all2 argMatches unionArgs params then
-          (`Custom typeName, linEnv, env)
+          (* Apply the kill set *)
+          (`Custom typeName, LinEnv.diff linEnv kills, env)
         else failwith ("Union constructor " ^ unionCtor ^ " applied to invalid arguments")
       end
       | _ -> failwith ("Cannot construct value with union constructor " ^ unionCtor)
@@ -225,7 +268,8 @@ let rec typecheck userTypes linEnv env = function
           (linEnv', env')
         end (linEnv', env') args_and_types in
         let (result_ty, linEnv''', env''') = typecheck userTypes linEnv'' env'' patResult in
-        if linEnv''' = LinEnv.empty then
+        (* if NewLEnv - OldLEnv = 0 then no new linear variables in scope *)
+        if LinEnv.diff linEnv''' linEnv = LinEnv.empty then
           let result = (result_ty, linEnv''', Env.cover linEnv' linEnv''' env' env''') in
           if rest = [] || check_branches rest = result then
             result
