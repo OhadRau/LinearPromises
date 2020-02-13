@@ -1,0 +1,22 @@
+union PList begin
+  Cons[Promise*(Int), PList];
+  Nil[]
+end
+
+func writeToAll(list: PList, value: Int): Unit begin
+  match list begin
+    Nil[] -> ()
+    Cons[p, rest] ->
+      p <- value;
+      writeToAll(rest, value)
+  end
+end
+
+func main(): Unit begin
+  let p: Promise*(Int) = promise Int in
+  let q: Promise*(Int) = promise Int in
+  let r: Promise*(Int) = promise Int in
+  let s: Promise*(Int) = promise Int in
+  let plist: PList = Cons[p, Cons[q, Cons[r, Cons[s, Nil[]]]]] in
+  writeToAll(plist, 999)
+end

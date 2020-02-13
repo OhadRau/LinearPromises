@@ -87,24 +87,31 @@ let rec typecheck userTypes linEnv env = function
   | Variable v -> failwith ("Unknown variable: " ^ v)
   | Let { id; annot; body;
           value = Promise { ty } } ->
+    (* If we're trying to construct a Promise* of the correct type *)
     if annot = `PromiseStar ty then begin
+      (* Add it to the linear environment & environment *)
       let linEnvP = LinEnv.add id linEnv
       and envP = Env.add id annot env in
+      (* Now typecheck the let's body with that in mind *)
       match typecheck userTypes linEnvP envP body with
       | (tau', linEnv', _) ->
+        (* notEliminated = the difference between the original environment & the
+           one after the body. If the body of the let doesn't eliminate that value
+           then it can leak to outside the current scope. *)
         let notEliminated = LinEnv.diff linEnv' linEnv in
         if notEliminated = linEnv' then
           (tau', linEnv', env)
-        else failwith ("Linear variables not consumed: " ^ LinEnv.to_string @@ LinEnv.diff linEnv' linEnv)
+        else failwith ("Linear variables not consumed: " ^ (LinEnv.to_string @@ LinEnv.diff linEnv' linEnv) ^
+                       " in definition of '" ^ id ^ "'")
     end else
       failwith ("Unmatched promise type in let expression: Got " ^ string_of_ty (`PromiseStar ty) ^ ", expected " ^ string_of_ty annot)
   | Let { id; annot; value; body } ->
     let (ty, linEnv0, env0) = typecheck userTypes linEnv env value in
     if ty = annot then begin
       let envId = Env.add id annot env0 in
-      let (tau', linEnv1, env1) = typecheck userTypes linEnv0 envId body in
+      let (tau', linEnv1, env1) = typecheck userTypes (linEnv0 |> LinEnv.add id) envId body in
       if liftable userTypes annot then
-        (tau', LinEnv.inter linEnv0 linEnv1 |> LinEnv.add id, Env.inter env0 env1)
+        (tau', LinEnv.inter linEnv0 linEnv1, Env.inter env0 env1)
       else  
         (tau', LinEnv.inter linEnv0 linEnv1, Env.inter env0 env1)
     end else
@@ -120,6 +127,8 @@ let rec typecheck userTypes linEnv env = function
           evalArgs (LinEnv.remove v linEnvN) (Env.replace v (`Promise tau) envN) prest arest
         | `Promise tau, (`PromiseStar tau', linEnvN, envN) when tau = tau' ->
           evalArgs linEnvN envN prest arest
+        | _, (t, linEnvN, envN) when t = expected_ty && liftable userTypes t ->
+          evalArgs (LinEnv.remove v linEnvN) envN prest arest
         | _, (t, linEnvN, envN) when t = expected_ty ->
           evalArgs linEnvN envN prest arest
         | _, (t, _, _) -> begin
@@ -155,23 +164,48 @@ let rec typecheck userTypes linEnv env = function
     begin match ty with
       | Some { typeName; typeDefn = Union cases } -> begin
         let _, params = List.find (fun (caseName, _) -> caseName = unionCtor) cases in
-        (* Kill every liftable value, because they transfer their * to the new value *)
-        let rec collectKills linEnv = begin function
-          | [] -> linEnv
-          | (arg, expected)::rest -> begin
-            match arg with
-            | Variable id when liftable userTypes expected -> collectKills (LinEnv.add id linEnv) rest
-            | _ -> collectKills linEnv rest
-          end
-        end in
-        let kills = collectKills LinEnv.empty (List.map2 (fun a b -> (a, b)) unionArgs params) in
+
+        let rec evalArgs linEnv' env' params args =
+          begin match params, args with
+          | [], [] -> ([], linEnv', env')
+          | [], _ | _, [] -> failwith "Type mismatch in union construction: number of parameters differed between expected and actual"
+          | expected_ty::prest, (Variable v as arg)::arest ->
+            begin match expected_ty, typecheck userTypes linEnv' env' arg with
+            | `PromiseStar tau, (`PromiseStar tau', linEnvN, envN) when tau = tau' ->
+              evalArgs (LinEnv.remove v linEnvN) (Env.replace v (`Promise tau) envN) prest arest
+            | `Promise tau, (`PromiseStar tau', linEnvN, envN) when tau = tau' ->
+              evalArgs linEnvN envN prest arest
+            | _, (t, linEnvN, envN) when t = expected_ty && liftable userTypes t ->
+              evalArgs (LinEnv.remove v linEnvN) envN prest arest
+            | _, (t, linEnvN, envN) when t = expected_ty ->
+              evalArgs linEnvN envN prest arest
+            | _, (t, _, _) -> begin
+                print_endline @@ "Expected: " ^ string_of_ty expected_ty;
+                print_endline @@ "Got: " ^ string_of_ty t;
+                Env.print string_of_ty env';
+                failwith "Type mismatch in union construction"
+              end
+            end
+          | expected_ty::prest, expr::arest ->
+            let (t, linEnvN, envN) = typecheck userTypes linEnv' env' expr in
+            if t = expected_ty then
+              evalArgs linEnvN envN prest arest
+            else begin
+              print_endline @@ "Expected: " ^ string_of_ty expected_ty;
+              print_endline @@ "Got: " ^ string_of_ty t;
+              Env.print string_of_ty env';
+              failwith "Type mismatch in union construction"
+            end
+          end in
+
+        let (_, linEnvA, envA) = evalArgs linEnv env params unionArgs in
 
         let argMatches arg expected =
           let (actual_ty, _, _) = typecheck userTypes linEnv env arg in
           expected = actual_ty in
         if List.for_all2 argMatches unionArgs params then
-          (* Apply the kill set *)
-          (`Custom typeName, LinEnv.diff linEnv kills, env)
+          (* Apply the updated environment *)
+          (`Custom typeName, linEnvA, envA)
         else failwith ("Union constructor " ^ unionCtor ^ " applied to invalid arguments")
       end
       | _ -> failwith ("Cannot construct value with union constructor " ^ unionCtor)
@@ -243,6 +277,10 @@ let rec typecheck userTypes linEnv env = function
   end
   | Match { matchValue; matchCases } -> begin
     let (val_ty, linEnv', env') = typecheck userTypes linEnv env matchValue in
+    (* If we match against a variable in the linear environment, eliminate it *)
+    let linEnv' = match matchValue with
+    | Variable v when LinEnv.mem v linEnv' -> LinEnv.remove v linEnv'
+    | _ -> linEnv' in
     let ty_name = match val_ty with
       | `Custom name -> name
       | _ -> failwith "Cannot match against a primitive type" in
@@ -328,7 +366,9 @@ let typecheck_fn userTypes env = function
     let linEnv', env' = load_params params userTypes (LinEnv.empty) env in
     let (ty, linEnv'', _) = typecheck userTypes linEnv' env' expr in
     if LinEnv.empty <> linEnv'' then
-      failwith "Function must eliminate all linear variables"
+      let leftovers = LinEnv.elements linEnv'' |> String.concat "," in
+      failwith ("Function '" ^ funcName ^ "' must eliminate all linear variables. {" ^
+                leftovers ^ "} were not eliminated.")
     else if ty <> retType then
       failwith ("Function '" ^ funcName ^ "' return value does not match declared type. Expected " ^ string_of_ty retType ^
                 ", Got: " ^ string_of_ty ty)
