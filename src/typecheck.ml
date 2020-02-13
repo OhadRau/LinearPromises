@@ -111,8 +111,10 @@ let rec typecheck userTypes linEnv env = function
       let envId = Env.add id annot env0 in
       let (tau', linEnv1, env1) = typecheck userTypes (linEnv0 |> LinEnv.add id) envId body in
       if liftable userTypes annot then
-        (tau', LinEnv.inter linEnv0 linEnv1, Env.inter env0 env1)
-      else  
+        if LinEnv.subset linEnv1 linEnv0 then
+          (tau', LinEnv.inter linEnv0 linEnv1, Env.inter env0 env1)
+        else failwith ("Linear environment leaked vars {" ^ LinEnv.to_string linEnv1 ^ "} in definition of '" ^ id ^ "'")
+      else
         (tau', LinEnv.inter linEnv0 linEnv1, Env.inter env0 env1)
     end else
       failwith ("Unmatched type in let expression: Got " ^ string_of_ty ty ^ ", expected " ^ string_of_ty annot)
