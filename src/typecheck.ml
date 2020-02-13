@@ -262,9 +262,8 @@ let rec typecheck userTypes linEnv env = function
         let args_and_types = List.map2 (fun l r -> (l, r)) patArgs ctor_arg_types in
         let (linEnv'', env'') = List.fold_left begin fun (linEnv, env) (arg, ty) ->
           let env' = Env.add arg ty env
-          and linEnv' = match ty with
-            | `PromiseStar _ -> LinEnv.add arg linEnv
-            | _ -> linEnv in
+          and linEnv' =
+            if liftable userTypes ty then LinEnv.add arg linEnv else linEnv in
           (linEnv', env')
         end (linEnv', env') args_and_types in
         let (result_ty, linEnv''', env''') = typecheck userTypes linEnv'' env'' patResult in
