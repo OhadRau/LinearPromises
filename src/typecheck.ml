@@ -314,19 +314,19 @@ let rec load_env fns env = match fns with
     let env' = Env.add funcName (`Function (List.map snd params, retType)) env in
     load_env funcs env'
 
-let rec load_params args linEnv env = match args with
+let rec load_params args userTypes linEnv env = match args with
   | [] -> (linEnv, env)
-  | (name, `PromiseStar ty)::params ->
-    let env' = Env.add name (`PromiseStar ty) env
+  | (name, ty)::params when liftable userTypes ty ->
+    let env' = Env.add name ty env
     and linEnv' = LinEnv.add name linEnv in
-    load_params params linEnv' env'
+    load_params params userTypes linEnv' env'
   | (name, ty)::params ->
     let env' = Env.add name ty env in
-    load_params params linEnv env'
+    load_params params userTypes linEnv env'
 
 let typecheck_fn userTypes env = function
   | { funcName; retType; params; expr } ->
-    let linEnv', env' = load_params params (LinEnv.empty) env in
+    let linEnv', env' = load_params params userTypes (LinEnv.empty) env in
     let (ty, linEnv'', _) = typecheck userTypes linEnv' env' expr in
     if LinEnv.empty <> linEnv'' then
       failwith "Function must eliminate all linear variables"
