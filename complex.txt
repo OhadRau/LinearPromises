@@ -3,11 +3,15 @@ union PList begin
   Nil[]
 end
 
+func write(p: Promise*(Int), value: Int): Unit begin
+  p <- value
+end
+
 func writeToAll(list: PList, value: Int): Unit begin
   match list begin
     Nil[] -> ()
     Cons[p, rest] ->
-      p <- value;
+      async write(p, value);
       writeToAll(rest, value)
   end
 end
