@@ -8,6 +8,6 @@ public class ThreadLockedObject {
   }
 
   public boolean access() {
-    return this.myTask == AsyncTask.currentTask();
+    return this.myTask.id() == AsyncTask.currentTask().id();
   }
 }
