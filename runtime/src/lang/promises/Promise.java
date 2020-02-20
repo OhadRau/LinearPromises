@@ -3,19 +3,15 @@ package lang.promises;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class Promise<T> {
+public class Promise<T> extends ThreadLockedObject {
     private T value;
     private boolean done;
     private Lock lock;
-    private AsyncTask owner;
 
     public Promise() {
+        super();
         done = false;
         lock = new ReentrantLock();
-    }
-
-    public Promise(AsyncTask task) {
-        owner = task;
     }
 
     public Unit fulfill(T value) {
