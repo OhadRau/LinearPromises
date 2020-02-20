@@ -1,0 +1,6 @@
+-- The main function for our program
+func main(): Unit begin -- Takes nothing, returns nothing
+  (* We don't really have to do much here, tbh.
+     I'm just going to return () *)
+  ()
+end

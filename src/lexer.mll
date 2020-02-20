@@ -21,7 +21,21 @@ let bool = "true" | "false"
 
 let id = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_' '\'']*
 
-rule read = parse
+rule inlineComment = parse
+  | newline
+    { next_line lexbuf; read lexbuf }
+  | _
+    { inlineComment lexbuf }
+
+and multiLineComment = parse
+  | newline
+    { next_line lexbuf; multiLineComment lexbuf }
+  | "*)"
+    { read lexbuf }
+  | _
+    { multiLineComment lexbuf }
+
+and read = parse
   | white     { read lexbuf }
   | newline   { next_line lexbuf; read lexbuf }
 
@@ -67,8 +81,10 @@ rule read = parse
   | "->"      { RIGHT_ARROW }
   | "<-"      { LEFT_ARROW }
   | "<~"      { LEFT_TILDE_ARROW }
-(*  | "->"      { RIGHT_ARROW } *)
   | '?'       { QUESTION }
+
+  | "--"      { inlineComment lexbuf }
+  | "(*"      { multiLineComment lexbuf }
 
   | eof       { EOF }
 
