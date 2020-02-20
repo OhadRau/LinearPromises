@@ -76,9 +76,43 @@ and liftable =
       result
     end
 
+let rec evalArgs whereString userTypes linEnv' env' params args =
+  begin match params, args with
+  | [], [] -> ([], linEnv', env')
+  | [], _ | _, [] ->
+    failwith ("Type mismatch in " ^ whereString ^ ": number of parameters differed between expected and actual")
+  | expected_ty::prest, (Variable v as arg)::arest ->
+    begin match expected_ty, typecheck userTypes linEnv' env' arg with
+    | `PromiseStar tau, (`PromiseStar tau', linEnvN, envN) when tau = tau' ->
+      evalArgs whereString userTypes (LinEnv.remove v linEnvN) (Env.replace v (`Promise tau) envN) prest arest
+    | `Promise tau, (`PromiseStar tau', linEnvN, envN) when tau = tau' ->
+      evalArgs whereString userTypes linEnvN envN prest arest
+    | _, (t, linEnvN, envN) when t = expected_ty && liftable userTypes t ->
+      evalArgs whereString userTypes (LinEnv.remove v linEnvN) envN prest arest
+    | _, (t, linEnvN, envN) when t = expected_ty ->
+      evalArgs whereString userTypes linEnvN envN prest arest
+    | _, (t, _, _) -> begin
+        print_endline @@ "Expected: " ^ string_of_ty expected_ty;
+        print_endline @@ "Got: " ^ string_of_ty t;
+        Env.print string_of_ty env';
+        failwith ("Type mismatch in " ^ whereString)
+      end
+    end
+  | expected_ty::prest, expr::arest ->
+    let (t, linEnvN, envN) = typecheck userTypes linEnv' env' expr in
+    if t = expected_ty then
+      evalArgs whereString userTypes linEnvN envN prest arest
+    else begin
+      print_endline @@ "Expected: " ^ string_of_ty expected_ty;
+      print_endline @@ "Got: " ^ string_of_ty t;
+      Env.print string_of_ty env';
+      failwith ("Type mismatch in " ^ whereString)
+    end
+  end
+
 (* typecheck : ty_decl list -> linear -> env -> expr -> (ty * linear * env) *)
 (* TODO: Assert that delta = {} at the end of every program *)
-let rec typecheck userTypes linEnv env = function
+and typecheck userTypes linEnv env = function
   | Unit -> (`Unit, linEnv, env)
   | Boolean _ -> (`Bool, linEnv, env)
   | Number _ -> (`Int, linEnv, env)
@@ -119,41 +153,9 @@ let rec typecheck userTypes linEnv env = function
     end else
       failwith ("Unmatched type in let expression: Got " ^ string_of_ty ty ^ ", expected " ^ string_of_ty annot)
   | Apply { fn; args } -> begin
-    let rec evalArgs linEnv' env' params args =
-      begin match params, args with
-      | [], [] -> ([], linEnv', env')
-      | [], _ | _, [] -> failwith "Type mismatch in function application: number of parameters differed between expected and actual"
-      | expected_ty::prest, (Variable v as arg)::arest ->
-        begin match expected_ty, typecheck userTypes linEnv' env' arg with
-        | `PromiseStar tau, (`PromiseStar tau', linEnvN, envN) when tau = tau' ->
-          evalArgs (LinEnv.remove v linEnvN) (Env.replace v (`Promise tau) envN) prest arest
-        | `Promise tau, (`PromiseStar tau', linEnvN, envN) when tau = tau' ->
-          evalArgs linEnvN envN prest arest
-        | _, (t, linEnvN, envN) when t = expected_ty && liftable userTypes t ->
-          evalArgs (LinEnv.remove v linEnvN) envN prest arest
-        | _, (t, linEnvN, envN) when t = expected_ty ->
-          evalArgs linEnvN envN prest arest
-        | _, (t, _, _) -> begin
-            print_endline @@ "Expected: " ^ string_of_ty expected_ty;
-            print_endline @@ "Got: " ^ string_of_ty t;
-            Env.print string_of_ty env';
-            failwith "Type mismatch in function application"
-          end
-        end
-      | expected_ty::prest, expr::arest ->
-        let (t, linEnvN, envN) = typecheck userTypes linEnv' env' expr in
-        if t = expected_ty then
-          evalArgs linEnvN envN prest arest
-        else begin
-          print_endline @@ "Expected: " ^ string_of_ty expected_ty;
-          print_endline @@ "Got: " ^ string_of_ty t;
-          Env.print string_of_ty env';
-          failwith "Type mismatch in function application"
-        end
-      end in
     match typecheck userTypes linEnv env fn with
     | (`Function (argTypes, returnType), _, _) ->
-      let (_, linEnv', env') = evalArgs linEnv env argTypes args in
+      let (_, linEnv', env') = evalArgs "function application" userTypes linEnv env argTypes args in
       (returnType, linEnv', env')
     | _ -> failwith "Cannot call a non-function"
     end
@@ -167,40 +169,7 @@ let rec typecheck userTypes linEnv env = function
       | Some { typeName; typeDefn = Union cases } -> begin
         let _, params = List.find (fun (caseName, _) -> caseName = unionCtor) cases in
 
-        let rec evalArgs linEnv' env' params args =
-          begin match params, args with
-          | [], [] -> ([], linEnv', env')
-          | [], _ | _, [] -> failwith "Type mismatch in union construction: number of parameters differed between expected and actual"
-          | expected_ty::prest, (Variable v as arg)::arest ->
-            begin match expected_ty, typecheck userTypes linEnv' env' arg with
-            | `PromiseStar tau, (`PromiseStar tau', linEnvN, envN) when tau = tau' ->
-              evalArgs (LinEnv.remove v linEnvN) (Env.replace v (`Promise tau) envN) prest arest
-            | `Promise tau, (`PromiseStar tau', linEnvN, envN) when tau = tau' ->
-              evalArgs linEnvN envN prest arest
-            | _, (t, linEnvN, envN) when t = expected_ty && liftable userTypes t ->
-              evalArgs (LinEnv.remove v linEnvN) envN prest arest
-            | _, (t, linEnvN, envN) when t = expected_ty ->
-              evalArgs linEnvN envN prest arest
-            | _, (t, _, _) -> begin
-                print_endline @@ "Expected: " ^ string_of_ty expected_ty;
-                print_endline @@ "Got: " ^ string_of_ty t;
-                Env.print string_of_ty env';
-                failwith "Type mismatch in union construction"
-              end
-            end
-          | expected_ty::prest, expr::arest ->
-            let (t, linEnvN, envN) = typecheck userTypes linEnv' env' expr in
-            if t = expected_ty then
-              evalArgs linEnvN envN prest arest
-            else begin
-              print_endline @@ "Expected: " ^ string_of_ty expected_ty;
-              print_endline @@ "Got: " ^ string_of_ty t;
-              Env.print string_of_ty env';
-              failwith "Type mismatch in union construction"
-            end
-          end in
-
-        let (_, linEnvA, envA) = evalArgs linEnv env params unionArgs in
+        let (_, linEnvA, envA) = evalArgs "union construction" userTypes linEnv env params unionArgs in
 
         let argMatches arg expected =
           let (actual_ty, _, _) = typecheck userTypes linEnv env arg in
