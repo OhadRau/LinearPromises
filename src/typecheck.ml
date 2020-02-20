@@ -268,13 +268,12 @@ let rec typecheck userTypes linEnv env = function
       and (elseType, elseLinEnv, _) = typecheck userTypes linEnv env else_branch in
       if thenType <> elseType then
         failwith "Type mismatch between conditional branches"
-      else if thenLinEnv <> elseLinEnv then
-        failwith "Conditional branches do not consume the same promises"
       else
         (* HACK: thenEnv, elseEnv can replace the type of a promise --
            how do we copy these modified types without allowing new vars
            declared in the branches to escape their scope? *)
-        (thenType, thenLinEnv, Env.cover linEnv thenLinEnv env thenEnv)
+        let mergedLinEnv = LinEnv.union thenLinEnv elseLinEnv in
+        (thenType, mergedLinEnv, Env.cover linEnv mergedLinEnv env thenEnv)
     | _ -> failwith "If condition is not a boolean"
   end
   | Match { matchValue; matchCases } -> begin
