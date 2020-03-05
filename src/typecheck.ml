@@ -36,8 +36,11 @@ module Env = struct
         oldType in
     mapi copy oldEnv
   
+  let to_string show env =
+    fold (fun k v result -> k ^ ": " ^ show v ^ "; " ^ result) env ""
+
   let print show env =
-    print_endline @@ fold (fun k v result -> k ^ ": " ^ show v ^ "; " ^ result) env ""
+    print_endline @@ to_string show env
 end
 
 let resolveUserType userTypes = function
@@ -143,7 +146,9 @@ and typecheck userTypes linEnv env = function
     let (ty, linEnv0, env0) = typecheck userTypes linEnv env value in
     if ty = annot then begin
       let envId = Env.add id annot env0 in
-      let (tau', linEnv1, env1) = typecheck userTypes (linEnv0 |> LinEnv.add id) envId body in
+      (* Don't lift into the lin env if it's not liftable! *)
+      let linEnv0' = if liftable userTypes annot then linEnv0 |> LinEnv.add id else linEnv0 in
+      let (tau', linEnv1, env1) = typecheck userTypes linEnv0' envId body in
       if liftable userTypes annot then
         if LinEnv.subset linEnv1 linEnv0 then
           (tau', LinEnv.inter linEnv0 linEnv1, Env.inter env0 env1)
@@ -288,6 +293,33 @@ and typecheck userTypes linEnv env = function
       (result_ty, linEnv'', env'')
     else failwith "Match cases must exactly match all union cases"
   end
+  | RecordMatch { matchRecord; matchArgs; matchBody } ->
+    let (val_ty, linEnv', env') = typecheck userTypes linEnv env matchRecord in
+    let linEnv' = match matchRecord with
+    | Variable v when LinEnv.mem v linEnv' -> LinEnv.remove v linEnv'
+    | _ -> linEnv' in
+    let ty_name = match val_ty with
+      | `Custom name -> name
+      | _ -> failwith "Cannot match against a primitive type" in
+    let ty_defn = match List.find (fun {typeName; _} -> typeName = ty_name) userTypes with
+      | { typeDefn = Record args; _ } -> args
+      | _ -> failwith "Must match against a record type" in
+    let fieldsExpected = List.map (fun (key, _) -> key) ty_defn |> List.sort String.compare
+    and fieldsApplied = List.map (fun (key, _) -> key) matchArgs |> List.sort String.compare in
+    let rec check_fields env linEnv = function
+      | [] -> (env, linEnv)
+      | (k, v)::rest ->
+        let _, k_type = List.find (fun (key, _) -> key = k) ty_defn in
+        let env' = Env.add v k_type env
+        and linEnv' = if liftable userTypes k_type then LinEnv.add v linEnv else linEnv in
+        check_fields env' linEnv' rest in
+    if fieldsApplied = fieldsExpected then begin
+      let (env'', linEnv'') = check_fields env' linEnv' matchArgs in
+      let (result_ty, linEnv''', env''') = typecheck userTypes linEnv'' env'' matchBody in
+      if LinEnv.diff linEnv''' linEnv = LinEnv.empty then
+        (result_ty, linEnv''', Env.cover linEnv' linEnv''' env' env''')
+      else failwith "Leftover linear variable in record match"
+    end else failwith "Match fields must exactly match all record fields"
   | Async { application } ->
     let (_, linEnv', env') = typecheck userTypes linEnv env application in
     (`Unit, linEnv', env')

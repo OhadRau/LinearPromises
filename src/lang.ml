@@ -69,6 +69,7 @@ and expr =
   | Let of { id: string; annot: ty; value: expr; body: expr }
   | If of { condition: expr; then_branch: expr; else_branch: expr }
   | Match of { matchValue: expr; matchCases: pattern list }
+  | RecordMatch of { matchRecord: expr; matchArgs: (string * string) list; matchBody: expr }
   | Apply of { fn: expr; args: expr list }
   | ConstructUnion of { unionCtor: string; unionArgs: expr list }
   | ConstructRecord of { recordCtor: string; recordArgs: (string * expr) list }
@@ -79,6 +80,9 @@ and expr =
   | Async of { application: expr }
   | For of { name: string; first: expr; last: expr; forBody: expr }
   | While of { whileCond: expr; whileBody: expr }
+
+let string_of_match_record pairs =
+  "{ " ^ (List.map (fun (k, v) -> k ^ " = " ^ v) pairs |> String.concat ", ") ^ "}"
 
 let rec string_of_expr = function
   | Variable v -> v
@@ -91,6 +95,8 @@ let rec string_of_expr = function
     "if " ^ string_of_expr condition ^ " then " ^ string_of_expr then_branch ^ " else " ^ string_of_expr else_branch ^ " end"
   | Match { matchValue; matchCases } ->
     "match " ^ string_of_expr matchValue ^ " begin " ^ string_of_match_cases matchCases ^ " end"
+  | RecordMatch { matchRecord; matchArgs; matchBody } ->
+    "match " ^ string_of_expr matchRecord ^ " begin " ^ string_of_match_record matchArgs ^ " -> " ^ string_of_expr matchBody ^ " end"
   | Apply { fn; args } ->
     string_of_expr fn ^ "(" ^ (List.fold_right (fun arg str -> string_of_expr arg ^ ", " ^ str) args "") ^ ")"
   | ConstructUnion { unionCtor; unionArgs } ->

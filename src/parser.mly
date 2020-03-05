@@ -141,6 +141,8 @@ expr:
     { Let { id; annot; value; body } }
   | MATCH; matchValue = expr; BEGIN; matchCases = match_cases; END
     { Match { matchValue; matchCases } }
+  | MATCH; matchRecord = expr; BEGIN; LEFT_BRACE; matchArgs = named_pattern_args; RIGHT_BRACE; RIGHT_ARROW; matchBody = expr; END
+    { RecordMatch { matchRecord; matchArgs; matchBody } }
   | IF; condition = expr; THEN; then_branch = expr; ELSE; else_branch = expr; END
     { If { condition; then_branch; else_branch } }
   | fn = expr; LEFT_PAREN; args = args; RIGHT_PAREN
@@ -198,6 +200,15 @@ pattern_args:
     { [id] }
   | id = IDENT; COMMA; rest = pattern_args
     { id::rest }
+;
+
+named_pattern_args:
+  |
+    { [] }
+  | id = IDENT; EQUAL; v = IDENT
+    { [(id, v)] }
+  | id = IDENT; EQUAL; v = IDENT; COMMA; rest = named_pattern_args
+    { (id, v)::rest }
 ;
 
 named_args:

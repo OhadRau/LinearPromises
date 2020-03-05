@@ -114,6 +114,7 @@ and emit userTypes ?(in_expr=false) = function
     Printf.sprintf "(%s).match(%s)%s"
       (emit userTypes ~in_expr:true matchValue) branches (if in_expr then "" else ";")
   end
+  | RecordMatch { matchRecord = _; matchArgs = _; matchBody = _ } -> failwith "Not yet supported"
   | Promise { ty } ->
     let ty' = java_type (ty :> ty) in
     Printf.sprintf "new Promise<%s>()" ty'
