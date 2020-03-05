@@ -138,7 +138,7 @@ and typecheck userTypes linEnv env = function
         let notEliminated = LinEnv.diff linEnv' linEnv in
         if notEliminated = linEnv' then
           (tau', linEnv', env)
-        else failwith ("Linear variables not consumed: " ^ (LinEnv.to_string @@ LinEnv.diff linEnv' linEnv) ^
+        else failwith ("Linear variables not consumed: " ^ (LinEnv.to_string notEliminated) ^
                        " in definition of '" ^ id ^ "'")
     end else
       failwith ("Unmatched promise type in let expression: Got " ^ string_of_ty (`PromiseStar ty) ^ ", expected " ^ string_of_ty annot)
@@ -200,8 +200,21 @@ and typecheck userTypes linEnv env = function
         let argMatches (argName, arg) (expectedName, expected_ty) =
           let (actual_ty, _, _) = typecheck userTypes linEnv env arg in
           expected_ty = actual_ty && argName = expectedName in
+        (* TODO: Replace this with something like evalArgs but for named arguments *)
+        let rec updateLinEnv linEnv = begin function
+          | (_, (Variable v as arg))::args ->
+            let (arg_ty, linEnv', _) = typecheck userTypes linEnv env arg in
+            let linEnv'' = if liftable userTypes arg_ty then
+              LinEnv.remove v linEnv'
+            else linEnv' in
+            updateLinEnv linEnv'' args
+          | (_, arg)::args ->
+            let (_, linEnv', _) = typecheck userTypes linEnv env arg in
+            updateLinEnv linEnv' args
+          | [] -> linEnv
+        end in
         if List.for_all2 argMatches argsSorted fieldsSorted then
-          (`Custom typeName, linEnv, env)
+          (`Custom typeName, updateLinEnv linEnv recordArgs, env)
         else failwith ("Record constructor " ^ recordCtor ^ " applied to invalid arguments")
       end
       | _ -> failwith ("Cannot construct value with union constructor " ^ recordCtor)
