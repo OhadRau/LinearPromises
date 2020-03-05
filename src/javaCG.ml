@@ -114,7 +114,28 @@ and emit userTypes ?(in_expr=false) = function
     Printf.sprintf "(%s).match(%s)%s"
       (emit userTypes ~in_expr:true matchValue) branches (if in_expr then "" else ";")
   end
-  | RecordMatch { matchRecord = _; matchArgs = _; matchBody = _ } -> failwith "Not yet supported"
+  | RecordMatch { matchRecord; matchArgs; matchBody } -> begin
+    let firstField = match matchArgs with
+      | (field, _)::_ -> field
+      | _ -> failwith "Match expr must contain at least one field" in
+    let matchType = List.find begin function
+      | {typeDefn=Record fields; _}
+        when List.exists (fun (fieldName, _) -> fieldName = firstField) fields -> true
+      | _ -> false
+    end userTypes in
+    let expectedFields = match matchType.typeDefn with
+      | Record fields -> fields
+      | _ -> failwith "Match expr must match against a record" in
+    let ordered = List.map begin fun (fieldName, _) ->
+      List.find (fun (key, _) -> key = fieldName) matchArgs
+    end expectedFields in
+    let branches =
+      Printf.sprintf "(%s) -> {%s}"
+        (String.concat ", " (List.map (fun (k, _) -> k) ordered))
+        (emit userTypes ~in_expr:false matchBody) in
+    Printf.sprintf "(%s).match(%s)%s"
+      (emit userTypes ~in_expr:true matchRecord) branches (if in_expr then "" else ";")
+  end
   | Promise { ty } ->
     let ty' = java_type (ty :> ty) in
     Printf.sprintf "new Promise<%s>()" ty'
@@ -172,6 +193,17 @@ let emit_match_params cases =
       ("_case" ^ name) in
   List.map function_type cases |> String.concat ", "
 
+let emit_record_match fields =
+  let field_tys = List.map snd fields in
+  Printf.sprintf {|
+    public<_R> _R match(%s) {
+      return %s(%s);
+    }
+|}
+    (emit_match_params [("Record", field_tys)])
+    "_caseRecord"
+    (fields |> List.map fst |> String.concat ", ")
+
 let emit_case_classes baseClass cases =
   let java_case_class (name, params) =
     let named_fields =
@@ -207,9 +239,13 @@ let emit_type { typeName; typeDefn } = match typeDefn with
 
     // constructor
 %s
+
+    // match method
+%s
   }
 |}
     typeName (emit_fields fields) (emit_constructor typeName fields)
+    (emit_record_match fields)
   | Union cases ->
     Printf.sprintf {|
   // union base class
