@@ -188,7 +188,8 @@ let emit_match_params cases =
   let function_type (name, params) =
     let paramTypes = List.map java_type params in
     let functionArgs = "_R"::paramTypes in
-    Printf.sprintf "Function<%s> %s"
+    Printf.sprintf "Function%d<%s> %s"
+      (List.length functionArgs - 1)
       (String.concat ", " functionArgs)
       ("_case" ^ name) in
   List.map function_type cases |> String.concat ", "
@@ -197,7 +198,7 @@ let emit_record_match fields =
   let field_tys = List.map snd fields in
   Printf.sprintf {|
     public<_R> _R match(%s) {
-      return %s(%s);
+      return %s.apply(%s);
     }
 |}
     (emit_match_params [("Record", field_tys)])
@@ -220,7 +221,7 @@ let emit_case_classes baseClass cases =
 
     // match method
     public<_R> _R match(%s) {
-      return %s(%s);
+      return %s.apply(%s);
     }
   }
 |}
@@ -250,7 +251,7 @@ let emit_type { typeName; typeDefn } = match typeDefn with
     Printf.sprintf {|
   // union base class
   public static abstract class %s extends ThreadLockedObject {
-    public<_R> _R match(%s);
+    public abstract <_R> _R match(%s);
   }
   // union case classes
   %s
@@ -276,8 +277,26 @@ public class %s {
 // functions
 %s
 
-  public static <T> Unit unsafeWrite(Promise<T> p, T v) {
+  private static <T> Unit unsafeWrite(Promise<T> p, T v) {
     p.fulfill(v);
+    return Unit.the;
+  }
+
+  private static Integer addInt(Integer a, Integer b) {
+    return a + b;
+  }
+
+  private static Boolean eqInt(Integer a, Integer b) {
+    return a.equals(b);
+  }
+
+ private static Unit printInt(Integer b) {
+    System.out.println(b);
+    return Unit.the;
+  }
+
+  private static Unit printBool(Boolean b) {
+    System.out.println(b);
     return Unit.the;
   }
 
