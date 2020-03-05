@@ -3,7 +3,7 @@ package lang.promises;
 public class ThreadLockedObject {
   private AsyncTask myTask;
 
-  public ThreadLocalObject() {
+  public ThreadLockedObject() {
     this.myTask = AsyncTask.currentTask();
   }
 
