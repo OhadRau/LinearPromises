@@ -1,0 +1,43 @@
+record PromiseInt begin
+  read: Promise(Int);
+  write: Promise*(Int)
+end
+
+union List begin
+  Nil[];
+  Cons[Promise*(Int), List]
+end
+
+func writeToAll(l: List, v: Int): Unit begin
+  match l begin
+    Nil[] -> ()
+    -- Bug: we can't reuse the name l for the same variable here with linear typing enabled
+    -- this shouldn't be hard to fix with something like SSA but I'm lazy
+    Cons[p, ll] ->
+      p <- v;
+      writeToAll(ll, addInt(v, 1))
+  end
+end
+
+func buildList(v: Int): List begin
+  if eqInt(v, 0) then
+    Nil[]
+  else
+    match promise Int begin
+      { write = w, read = r } ->
+        Cons[w, buildList(addInt(v, -1))]
+    end
+  end
+end
+
+func main(): Unit begin
+  match promise Int begin
+    { write = w, read = r } ->
+      w <- 5;
+      if eqInt(?r, 5) then -- Error if we reuse p here, since p has been 'moved'
+        writeToAll(buildList(10), 0)
+      else
+        writeToAll(buildList(5), 0)
+      end
+  end
+end

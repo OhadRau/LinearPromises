@@ -1,6 +1,6 @@
 open Lang
 open Lexing
-open Typecheck
+open Typecheck2
 
 let string_of_position lexbuf =
   let pos = lexbuf.lex_curr_p in
