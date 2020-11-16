@@ -1,5 +1,6 @@
 open Lang
 open Lexing
+open Contexts
 open Typecheck2
 
 let string_of_position lexbuf =
@@ -43,7 +44,7 @@ let () =
     let typecheck_and_print types func =
       print_endline (string_of_expr func.expr);
       print_endline "---------------";
-      let ty = typecheck_fn types gamma func in
+      let ty = typecheck_fn types gamma (Ident.preprocess_idents gamma func) in
       print_endline (func.funcName ^ ": " ^ string_of_ty ty);
       print_endline "---------------" in
     List.iter (typecheck_and_print program.types) program.funcs;

@@ -13,9 +13,9 @@ func writeToAll(l: List, v: Int): Unit begin
     Nil[] -> ()
     -- Bug: we can't reuse the name l for the same variable here with linear typing enabled
     -- this shouldn't be hard to fix with something like SSA but I'm lazy
-    Cons[p, ll] ->
+    Cons[p, l] ->
       p <- v;
-      writeToAll(ll, addInt(v, 1))
+      writeToAll(l, addInt(v, 1))
   end
 end
 
