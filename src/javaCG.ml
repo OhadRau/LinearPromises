@@ -131,7 +131,7 @@ and emit userTypes ?(in_expr=false) = function
     end expectedFields in
     let branches =
       Printf.sprintf "(%s) -> {%s}"
-        (String.concat ", " (List.map (fun (k, _) -> k) ordered))
+        (String.concat ", " (List.map (fun (_, v) -> v) ordered))
         (emit userTypes ~in_expr:false matchBody) in
     Printf.sprintf "(%s).match(%s)%s"
       (emit userTypes ~in_expr:true matchRecord) branches (if in_expr then "" else ";")
