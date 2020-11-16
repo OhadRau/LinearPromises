@@ -74,7 +74,7 @@ and expr =
   | ConstructUnion of { unionCtor: string; unionArgs: expr list }
   | ConstructRecord of { recordCtor: string; recordArgs: (string * expr) list }
   | RecordAccess of { record: expr; field: string }
-  | Promise of { ty: primitive_ty }
+  | Promise of { read: string; write: string; ty: primitive_ty; promiseBody: expr }
   | Write of { promiseStar: expr; newValue: expr; unsafe: bool }
   | Read of { promise: expr }
   | Async of { application: expr }
@@ -105,8 +105,8 @@ let rec string_of_expr = function
     recordCtor ^ "{" ^ (List.fold_right (fun (name, arg) str -> name ^ "=" ^ string_of_expr arg ^ ", " ^ str) recordArgs "") ^ "}"
   | RecordAccess { record; field } ->
     (string_of_expr record) ^ "." ^ field
-  | Promise { ty } ->
-    "promise " ^ string_of_ty (ty :> ty)
+  | Promise { read; write; ty; promiseBody } ->
+    "promise " ^ read ^ ", " ^ write ^ ": " ^ string_of_ty (ty :> ty) ^ " in " ^ string_of_expr promiseBody
   | Write { promiseStar; newValue; unsafe } ->
     let arrow = if unsafe then " <~ " else " <- " in
     string_of_expr promiseStar ^ arrow ^ string_of_expr newValue

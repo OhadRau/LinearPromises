@@ -153,8 +153,8 @@ expr:
     { ConstructRecord { recordCtor=ctor; recordArgs=args } }
   | record = expr; DOT; field = IDENT
     { RecordAccess { record; field } }
-  | PROMISE; ty = primitive_type
-    { Promise { ty } }
+  | PROMISE; read = IDENT; COMMA; write = IDENT; COLON; ty = primitive_type; IN; promiseBody = expr
+    { Promise { read; write; ty; promiseBody } }
   | promiseStar = expr; LEFT_ARROW; newValue = expr
     { Write { promiseStar; newValue; unsafe = false } }
   | promiseStar = expr; LEFT_TILDE_ARROW; newValue = expr

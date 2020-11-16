@@ -71,7 +71,9 @@ let rec free env = function
     List.map (fun (_, arg) -> free env arg) recordArgs |> Vars.concat
   | RecordAccess { record; _ } ->
     free env record
-  | Promise _ -> Vars.empty
+  | Promise { read; write; promiseBody; _ } ->
+    let env = Vars.add read (Vars.add write env) in
+    free env promiseBody
   | Write { newValue; unsafe=true; _ } ->
     (* If we perform an unsafe write, this should not count as consuming the Promise*. *)
     free env newValue
@@ -274,32 +276,9 @@ let rec typecheck userTypes env expr = match expr with
       | None -> failwith ("Type " ^ record_ty.typeName ^ " does not contain field " ^ field)
       | Some (_, field_ty) -> field_ty
     end
-  | Promise { ty } when env_complete userTypes env expr ->
-    (* Without generics, how can we return a pair here? If we do
-       `promise Int` this returns `Promise(Int) * Promise*(Int)`
-       which is a distinct type from
-       `Promise(Bool) * Promise*(Bool)`.
-       
-       In the paper, we allow for anonymous types, but this breaks assumptions in the
-       compiler. Since userTypes is immutable here, this means we'll need a 2-pass
-       type checker to pre-generate these types.
-       
-       Two more choices: generate a promise pair type for every known type &
-       require the user to manually define their promise pair types ahead of time. *)
-    (* For now, we will require the type to be pre-defined & search for it *)
-    let result_type = List.find_opt begin function
-      | { typeDefn = Record fields; _ }
-        when List.sort_by_first fields = [
-          ("read", `Promise ty);
-          ("write", `PromiseStar ty)
-        ] -> true
-      | _ -> false
-    end userTypes in
-    begin match result_type with
-      | None -> failwith ("Promise pairs must be defined with { read: Promise(" ^ string_of_ty (ty :> ty) ^
-                          "); write: Promise*(" ^ string_of_ty (ty :> ty) ^ ") }")
-      | Some { typeName; _ } -> `Custom typeName
-    end
+  | Promise { read; write; ty; promiseBody } when env_complete userTypes env expr ->
+    let env = env |> Env.add read (`Promise ty) |> Env.add write (`PromiseStar ty) in
+    typecheck userTypes env promiseBody
   | Write { promiseStar; newValue; _ } ->
     let gamma_promise, gamma_value = split userTypes env promiseStar newValue |> Option.get in
     let value_ty = typecheck userTypes gamma_value newValue in

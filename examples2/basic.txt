@@ -1,8 +1,3 @@
-record PromiseInt begin
-  read: Promise(Int);
-  write: Promise*(Int)
-end
-
 union List begin
   Nil[];
   Cons[Promise*(Int), List]
@@ -23,21 +18,17 @@ func buildList(v: Int): List begin
   if eqInt(v, 0) then
     Nil[]
   else
-    match promise Int begin
-      { write = w, read = r } ->
-        Cons[w, buildList(addInt(v, -1))]
-    end
+    promise r, w: Int in
+    Cons[w, buildList(addInt(v, -1))]
   end
 end
 
 func main(): Unit begin
-  match promise Int begin
-    { write = w, read = r } ->
-      w <- 5;
-      if eqInt(?r, 5) then -- Error if we reuse p here, since p has been 'moved'
-        writeToAll(buildList(10), 0)
-      else
-        writeToAll(buildList(5), 0)
-      end
+  promise r, w: Int in
+  w <- 5;
+  if eqInt(?r, 5) then -- Error if we reuse p here, since p has been 'moved'
+    writeToAll(buildList(10), 0)
+  else
+    writeToAll(buildList(5), 0)
   end
 end

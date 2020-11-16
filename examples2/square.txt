@@ -1,0 +1,26 @@
+func mult(m: Int, n: Int): Int begin
+  if eqInt(m, 0) then 0
+  else
+    if eqInt(m, 1) then n
+    else
+      let x: Int = mult(addInt(m, -1), n) in
+      addInt(n, x)
+    end
+  end
+end
+
+func square(m: Int): Int begin
+  mult(m, m)
+end
+
+func squareAndWrite(w: Promise*(Int), n: Int): Unit begin
+  printInt(999999);
+  w <- square(n)
+end
+
+func main(): Unit begin
+  promise r, w: Int in
+  async squareAndWrite(w, 10);
+  printInt(1337);
+  printInt(?r)
+end

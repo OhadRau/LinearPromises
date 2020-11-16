@@ -43,6 +43,10 @@ and emit userTypes ?(in_expr=false) = function
     let ty = java_type annot in
     Printf.sprintf "%s %s = %s; %s"
       ty (make_id id) (* = *) (emit userTypes ~in_expr:true value) (* ; *) (emit userTypes body)
+  | Promise { read; write; ty; promiseBody } ->
+    let ty' = java_type (ty :> ty) in
+    Printf.sprintf "Promise<%s> %s = new Promise<%s>(); Promise<%s> %s = %s; %s"
+      ty' read ty' ty' write read (emit userTypes promiseBody)
   | If { condition; then_branch; else_branch } when in_expr ->
     Printf.sprintf "((%s) ? (%s) : (%s))"
       (emit userTypes ~in_expr condition) (emit userTypes ~in_expr then_branch) (emit userTypes ~in_expr else_branch)
@@ -136,9 +140,6 @@ and emit userTypes ?(in_expr=false) = function
     Printf.sprintf "(%s).match(%s)%s"
       (emit userTypes ~in_expr:true matchRecord) branches (if in_expr then "" else ";")
   end
-  | Promise { ty } ->
-    let ty' = java_type (ty :> ty) in
-    Printf.sprintf "new Promise<%s>()" ty'
   | Write { promiseStar; newValue; _ } ->
     Printf.sprintf "%s.fulfill(%s)"
       (emit userTypes ~in_expr:true promiseStar) (emit userTypes ~in_expr:true newValue)

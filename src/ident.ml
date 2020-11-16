@@ -50,7 +50,10 @@ let rec make_unique env = function
     ConstructRecord{ recordCtor; recordArgs }
   | RecordAccess { record; field } ->
     RecordAccess { record = make_unique env record; field }
-  | Promise { ty } -> Promise { ty }
+  | Promise { read; write; ty; promiseBody } ->
+    let env = env |> Env.add read (uniq read) |> Env.add write (uniq write) in
+    Promise { read = Env.find read env; write = Env.find write env; ty;
+              promiseBody = make_unique env promiseBody }
   | Write { promiseStar; newValue; unsafe } ->
     Write { promiseStar = make_unique env promiseStar;
             newValue = make_unique env newValue; unsafe }
