@@ -1,0 +1,28 @@
+func waitN(n: Int): Unit begin
+  for i = 0 to n begin
+    ()
+  end
+end
+
+func task(): Int begin
+  waitN(1000000);
+  555
+end
+
+func future(): Promise(Int) begin
+  promise r, w: Int in
+  async w <- task();
+  r
+end
+
+func doubleInt(n: Int): Int begin
+  addInt(n, n)
+end
+
+func main(): Unit begin
+  let result: Promise(Int) = future() in
+  promise r, w: Int in
+  async printInt(?result);
+  async w <- doubleInt(?result);
+  async printInt(?r)
+end
