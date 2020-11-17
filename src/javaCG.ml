@@ -34,42 +34,45 @@ let rec emit_args userTypes = function
     Printf.sprintf "%s, %s"
       (emit userTypes ~in_expr:true arg) (emit_args userTypes args)
 
-and emit userTypes ?(in_expr=false) = function 
+and emit userTypes ?(in_expr=false) ?(is_final=false) = function 
   | Let { id = "_"; value = (For _) as loop; body; _ }
   | Let { id = "_"; value = (While _) as loop; body; _ } ->
     Printf.sprintf "%s %s"
-      (emit userTypes ~in_expr loop) (emit userTypes body)
+      (emit userTypes ~in_expr loop) (emit userTypes ~is_final body)
   | Let { id; annot; value; body } ->
     let ty = java_type annot in
     Printf.sprintf "%s %s = %s; %s"
-      ty (make_id id) (* = *) (emit userTypes ~in_expr:true value) (* ; *) (emit userTypes body)
+      ty (make_id id) (* = *) (emit userTypes ~in_expr:true value) (* ; *) (emit userTypes ~is_final body)
   | Promise { read; write; ty; promiseBody } ->
     let ty' = java_type (ty :> ty) in
     Printf.sprintf "Promise<%s> %s = new Promise<%s>(); Promise<%s> %s = %s; %s"
-      ty' read ty' ty' write read (emit userTypes promiseBody)
+      ty' read ty' ty' write read (emit userTypes ~is_final promiseBody)
   | If { condition; then_branch; else_branch } when in_expr ->
     Printf.sprintf "((%s) ? (%s) : (%s))"
-      (emit userTypes ~in_expr condition) (emit userTypes ~in_expr then_branch) (emit userTypes ~in_expr else_branch)
+      (emit userTypes ~in_expr condition)
+      (emit userTypes ~in_expr then_branch) (emit userTypes ~in_expr else_branch)
   | If { condition; then_branch; else_branch } ->
     Printf.sprintf "if (%s) { %s } else { %s }"
-      (emit userTypes ~in_expr:true condition) (emit userTypes then_branch) (emit userTypes else_branch)
+      (emit userTypes ~in_expr:true condition)
+      (emit userTypes ~is_final then_branch) (emit userTypes ~is_final else_branch)
   | For _ | While _ when in_expr ->
     failwith "Cannot use for/while loop inside of an expression"
   | For { name; first; last; forBody } ->
     (* TODO: What if last < first? What if type(first) != int? *)
-    Printf.sprintf "for (int %s = %s; %s < %s; %s++) { %s }"
+    Printf.sprintf "for (int %s = %s; %s < %s; %s++) { %s }%s"
       name (* = *) (emit userTypes ~in_expr:true first) (* ; *)
       name (* < *) (emit userTypes ~in_expr:true last)  (* ; *)
       name (* ++ *)
       (emit userTypes forBody)
+      (if is_final then "; return Unit.the;" else "")
   | While { whileCond; whileBody } ->
-    Printf.sprintf "while (%s) { %s }"
+    Printf.sprintf "while (%s) { %s }%s"
     (emit userTypes ~in_expr:true whileCond) (emit userTypes whileBody)
-  (* TODO: How do we get the final ; + return when it's needed?
-     This works ok for now because of our functional AST but e.g. we can't do
-     something like: while (true) { ... }; return a; *)
-  | e when not in_expr ->
+    (if is_final then "; return Unit.the;" else "")
+  | e when not in_expr && is_final ->
     Printf.sprintf "return %s;" (emit userTypes ~in_expr:true e)
+  | e when not in_expr && not is_final ->
+    Printf.sprintf "Unit.ignore(%s);" (emit userTypes ~in_expr:true e)
   | Variable v -> v
   | Unit -> "Unit.the"
   | Number n -> string_of_int n
@@ -163,7 +166,7 @@ let emit_fun userTypes { funcName; retType; params; expr } =
     %s
   }
 |}
-  (java_type retType) funcName (emit_params params) (emit userTypes expr)
+  (java_type retType) funcName (emit_params params) (emit userTypes ~is_final:true expr)
 
 let emit_fields fields =
   let java_field (name, ty) =
