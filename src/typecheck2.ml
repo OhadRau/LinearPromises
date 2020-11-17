@@ -291,10 +291,21 @@ let rec typecheck userTypes env expr = match expr with
       | `Promise value_ty -> (value_ty :> ty)
       | ty -> failwith ("Could not read non-promise type " ^ string_of_ty ty)
     end
-  | For { name=_; first=_; last=_; forBody=_ } ->
-    failwith "Unimplemented"
-  | While { whileCond=_; whileBody=_ } ->
-    failwith "Unimplemented"
+  | For { name; first; last; forBody } ->
+    begin match split_sequence userTypes env [first; last; forBody] with
+      | [env_first; env_last; env_body] ->
+        let env_body = Env.add name `Int env_body in
+        if typecheck userTypes env_first first = `Int &&
+           typecheck userTypes env_last last = `Int
+        then typecheck userTypes env_body forBody
+        else failwith "For expression expects integer bounds"
+      | _ -> failwith "Unable to split environments safely in for expression"
+    end
+  | While { whileCond; whileBody } ->
+    let env_cond, env_body = split userTypes env whileCond whileBody |> Option.get in
+    if typecheck userTypes env_cond whileCond = `Bool then
+      typecheck userTypes env_body whileBody
+    else failwith "While expression expects boolean condition"
   | Unit | Number _ | Boolean _ | ConstructRecord _ | ConstructUnion _
   | RecordAccess _ | Promise _ ->
     failwith ("Leftover variables in env in expr: " ^ string_of_expr expr)
