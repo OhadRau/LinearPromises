@@ -36,8 +36,10 @@ let read_file eval filename =
 let () =
   let eval program =
     let gamma = Env.empty |> Env.add "unsafeWrite" (`Function ([`Promise `Int; `Int], `Unit))
-                          |> Env.add "printInt" (`Function ([`Int], `Unit))
-                          |> Env.add "printBool" (`Function ([`Bool], `Unit))
+                          |> Env.add "intToString" (`Function ([`Int], `String))
+                          |> Env.add "boolToString" (`Function ([`Bool], `String))
+                          |> Env.add "print" (`Function ([`String], `Unit))
+                          |> Env.add "println" (`Function ([`String], `Unit))
                           |> load_env program.funcs in
     let typecheck_and_print types func =
       print_endline (string_of_expr func.expr);

@@ -296,13 +296,21 @@ public class %s {
     return Unit.the;
   }
 
-  private static Unit printInt(Integer b) {
-    System.out.println(b);
+  private static String intToString(Integer i) {
+    return i.toString();
+  }
+
+  private static String boolToString(Boolean b) {
+    return b.toString();
+  }
+
+  private static Unit print(String s) {
+    System.out.print(s);
     return Unit.the;
   }
 
-  private static Unit printBool(Boolean b) {
-    System.out.println(b);
+  private static Unit println(String s) {
+    System.out.println(s);
     return Unit.the;
   }
 

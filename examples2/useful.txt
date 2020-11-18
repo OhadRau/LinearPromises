@@ -23,7 +23,7 @@ end
 func main(): Unit begin
   let result: Promise(Int) = future() in
   promise r, w: Int in
-  async printInt(?result);
+  async println(intToString(?result));
   async w <- doubleInt(?result);
-  async printInt(?r)
+  async println(intToString(?r))
 end

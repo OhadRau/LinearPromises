@@ -14,13 +14,13 @@ func square(m: Int): Int begin
 end
 
 func squareAndWrite(w: Promise*(Int), n: Int): Unit begin
-  printInt(999999);
+  println("Squaring");
   w <- square(n)
 end
 
 func main(): Unit begin
   promise r, w: Int in
   async squareAndWrite(w, 10);
-  printInt(1337);
-  printInt(?r)
+  println("Waiting for squared value...");
+  println(intToString(?r))
 end
