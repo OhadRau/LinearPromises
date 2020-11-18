@@ -67,6 +67,12 @@ and read = parse
   | id as id  { IDENT id }
 
   | '='       { EQUAL }
+  | "=="      { IS_EQUAL }
+  | "!="      { NOT_EQUAL }
+  | '<'       { LESS_THAN }
+  | "<="      { LESS_THAN_EQUAL }
+  | '>'       { GREATER_THAN }
+  | ">="      { GREATER_THAN_EQUAL }
   | '.'       { DOT }
   | '('       { LEFT_PAREN }
   | ')'       { RIGHT_PAREN }

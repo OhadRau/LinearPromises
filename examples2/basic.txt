@@ -15,7 +15,7 @@ func writeToAll(l: List, v: Int): Unit begin
 end
 
 func buildList(v: Int): List begin
-  if eqInt(v, 0) then
+  if v == 0 then
     Nil[]
   else
     promise r, w: Int in
@@ -26,7 +26,7 @@ end
 func main(): Unit begin
   promise r, w: Int in
   w <- 5;
-  if eqInt(?r, 5) then -- Error if we reuse p here, since p has been 'moved'
+  if ?r == 5 then -- Error if we reuse p here, since p has been 'moved'
     writeToAll(buildList(10), 0)
   else
     writeToAll(buildList(5), 0)

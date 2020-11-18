@@ -55,6 +55,23 @@ let string_of_ty_decl {typeName; typeDefn} =
     format_union_cases alternatives ^
     "end"
 
+type compare = [
+  `Eq | `Neq | `Lt | `Lte | `Gt | `Gte
+]
+
+type infix = compare
+
+let string_of_compare = function
+  | `Eq -> "=="
+  | `Neq -> "!="
+  | `Lt -> "<"
+  | `Lte -> "<="
+  | `Gt -> ">"
+  | `Gte -> ">="
+
+let string_of_infix = function
+  | #compare as comp -> string_of_compare comp
+
 type pattern = {
   patCtor: string;
   patArgs: string list;
@@ -66,6 +83,7 @@ and expr =
   | Unit
   | Number of int
   | Boolean of bool
+  | Infix of { mode: infix; left: expr; right: expr }
   | Let of { id: string; annot: ty; value: expr; body: expr }
   | If of { condition: expr; then_branch: expr; else_branch: expr }
   | Match of { matchValue: expr; matchCases: pattern list }
@@ -89,6 +107,8 @@ let rec string_of_expr = function
   | Unit -> "()"
   | Number n -> string_of_int n
   | Boolean b -> string_of_bool b
+  | Infix { mode; left; right } ->
+    "(" ^ string_of_expr left ^ ") " ^ string_of_infix mode ^ " (" ^ string_of_expr right ^ ")"
   | Let { id; annot; value; body } ->
     "let " ^ id ^ ": " ^ string_of_ty annot ^ " = " ^ string_of_expr value ^ " in " ^ string_of_expr body
   | If { condition; then_branch; else_branch } ->

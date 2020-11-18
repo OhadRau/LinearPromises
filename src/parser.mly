@@ -26,6 +26,12 @@
 %token TYPE_PROMISE
 
 %token EQUAL
+%token IS_EQUAL
+%token NOT_EQUAL
+%token LESS_THAN
+%token LESS_THAN_EQUAL
+%token GREATER_THAN
+%token GREATER_THAN_EQUAL
 %token DOT
 %token LEFT_PAREN
 %token RIGHT_PAREN
@@ -46,7 +52,9 @@
 
 %right SEMICOLON IN
 %nonassoc ASYNC
-%nonassoc QUESTION LEFT_ARROW LEFT_TILDE_ARROW
+%nonassoc LEFT_ARROW LEFT_TILDE_ARROW
+%nonassoc IS_EQUAL NOT_EQUAL LESS_THAN LESS_THAN_EQUAL GREATER_THAN GREATER_THAN_EQUAL
+%nonassoc QUESTION
 %nonassoc DOT
 %nonassoc LEFT_PAREN
 
@@ -137,6 +145,18 @@ expr:
     { Unit }
   | LEFT_PAREN; e = expr; RIGHT_PAREN
     { e }
+  | left = expr; IS_EQUAL; right = expr
+    { Infix { mode=`Eq; left; right } }
+  | left = expr; NOT_EQUAL; right = expr
+    { Infix { mode=`Neq; left; right } }
+  | left = expr; LESS_THAN; right = expr
+    { Infix { mode=`Lt; left; right } }
+  | left = expr; LESS_THAN_EQUAL; right = expr
+    { Infix { mode=`Lte; left; right } }
+  | left = expr; GREATER_THAN; right = expr
+    { Infix { mode=`Gt; left; right } }
+  | left = expr; GREATER_THAN_EQUAL; right = expr
+    { Infix { mode=`Gte; left; right } }
   | LET; id = IDENT; COLON; annot = type_expr; EQUAL; value = expr; IN; body = expr
     { Let { id; annot; value; body } }
   | MATCH; matchValue = expr; BEGIN; matchCases = match_cases; END

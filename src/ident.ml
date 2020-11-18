@@ -16,6 +16,8 @@ let rec make_unique env = function
   | Unit -> Unit
   | Number n -> Number n
   | Boolean b -> Boolean b
+  | Infix { mode; left; right } ->
+    Infix { mode; left = make_unique env left; right = make_unique env right }
   | Let { id; annot; value; body } ->
     let new_id = uniq id in
     let new_env = Env.add id new_id env in

@@ -1,7 +1,7 @@
 func mult(m: Int, n: Int): Int begin
-  if eqInt(m, 0) then 0
+  if m == 0 then 0
   else
-    if eqInt(m, 1) then n
+    if m == 1 then n
     else
       let x: Int = mult(addInt(m, -1), n) in
       addInt(n, x)

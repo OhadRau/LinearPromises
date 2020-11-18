@@ -48,6 +48,8 @@ end
 let rec free env = function
   | Variable v -> if not (Vars.mem v env) then Vars.singleton v else Vars.empty
   | Unit | Number _ | Boolean _ -> Vars.empty
+  | Infix { left; right; _ } ->
+    Vars.union (free env left) (free env right)
   | Let { id; value; body; _ } ->
     let env_body = Vars.add id env in
     Vars.union (free env value) (free env_body body)
@@ -183,6 +185,11 @@ let rec typecheck userTypes env expr = match expr with
     let gamma, _ = split userTypes env (Variable var) (Unit) |> Option.get in
     Env.find var gamma
   | Variable var -> failwith ("Unknown variable: " ^ var)
+  | Infix { mode = #compare; left; right } ->
+    let gamma_left, gamma_right = split userTypes env left right |> Option.get in
+    if typecheck userTypes gamma_left left = typecheck userTypes gamma_right right then
+      `Bool
+    else failwith "Comparison expects both arguments to have the same type"
   | Let { id; annot; value; body } ->
     let gamma_value, gamma_body = split userTypes env value body |> Option.get in
     let ty_value = typecheck userTypes gamma_value value in

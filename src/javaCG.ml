@@ -77,6 +77,10 @@ and emit userTypes ?(in_expr=false) ?(is_final=false) = function
   | Unit -> "Unit.the"
   | Number n -> string_of_int n
   | Boolean b -> string_of_bool b
+  | Infix { mode=#compare as mode; left; right } ->
+    Printf.sprintf "(%s).compareTo(%s) %s 0"
+      (emit userTypes ~in_expr:true left)
+      (emit userTypes ~in_expr:true right) (string_of_compare mode)
   | Apply { fn; args } ->
     Printf.sprintf "%s(%s)"
       (emit userTypes ~in_expr:true fn) (emit_args userTypes args)
