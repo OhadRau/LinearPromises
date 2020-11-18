@@ -1,5 +1,5 @@
 type primitive_ty =
-  [ `Int | `Bool | `Unit | `Custom of string ]
+  [ `Int | `Bool | `String | `Unit | `Custom of string ]
 
 type ty = [
   | primitive_ty
@@ -10,6 +10,7 @@ type ty = [
 let rec string_of_ty = function
   | `Int -> "Int"
   | `Bool -> "Bool"
+  | `String -> "String"
   | `Unit -> "Unit"
   | `Custom name -> name
   | `Promise ty -> "Promise(" ^ string_of_ty (ty :> ty) ^ ")"
@@ -94,6 +95,7 @@ and expr =
   | Unit
   | Number of int
   | Boolean of bool
+  | String of string
   | Infix of { mode: infix; left: expr; right: expr }
   | Let of { id: string; annot: ty; value: expr; body: expr }
   | If of { condition: expr; then_branch: expr; else_branch: expr }
@@ -118,6 +120,7 @@ let rec string_of_expr = function
   | Unit -> "()"
   | Number n -> string_of_int n
   | Boolean b -> string_of_bool b
+  | String s -> "\"" ^ String.escaped s ^ "\""
   | Infix { mode; left; right } ->
     "(" ^ string_of_expr left ^ ") " ^ string_of_infix mode ^ " (" ^ string_of_expr right ^ ")"
   | Let { id; annot; value; body } ->

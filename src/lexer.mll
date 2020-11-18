@@ -35,12 +35,30 @@ and multiLineComment = parse
   | _
     { multiLineComment lexbuf }
 
+and string_literal strbuf = parse
+  | eof
+    { EOF }
+  | "\\\"" as q
+    { Buffer.add_string strbuf q;
+      string_literal strbuf lexbuf }
+  | '"'
+    { STRING (Buffer.contents strbuf |> Scanf.unescaped) }
+  | '\n'
+    { new_line lexbuf;
+      Buffer.add_char strbuf '\n';
+      string_literal strbuf lexbuf }
+  | _ as c
+    { Buffer.add_char strbuf c;
+      string_literal strbuf lexbuf }
+
 and read = parse
   | white     { read lexbuf }
   | newline   { next_line lexbuf; read lexbuf }
 
   | bool as b { BOOL (bool_of_string b) }
   | int as i  { INT (int_of_string i) }
+  | '"'
+    { string_literal (Buffer.create 100) lexbuf }
 
   | "func"    { FUNC }
   | "union"   { UNION }
@@ -62,6 +80,7 @@ and read = parse
   | "Unit"    { TYPE_UNIT }
   | "Bool"    { TYPE_BOOL }
   | "Int"     { TYPE_INT }
+  | "String"  { TYPE_STRING }
   | "Promise" { TYPE_PROMISE }
 
   | id as id  { IDENT id }

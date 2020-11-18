@@ -1,5 +1,6 @@
 %token <bool>   BOOL
 %token <int>    INT
+%token <string> STRING
 %token <string> IDENT
 
 %token FUNC UNION RECORD
@@ -13,7 +14,7 @@
 %token PROMISE
 %token ASYNC
 
-%token TYPE_UNIT TYPE_BOOL TYPE_INT TYPE_PROMISE
+%token TYPE_UNIT TYPE_BOOL TYPE_INT TYPE_STRING TYPE_PROMISE
 
 %token EQUAL
 %token IS_EQUAL NOT_EQUAL LESS_THAN LESS_THAN_EQUAL GREATER_THAN GREATER_THAN_EQUAL
@@ -89,6 +90,7 @@ union_cases:
 primitive_type:
   | TYPE_UNIT  { `Unit }
   | TYPE_BOOL  { `Bool }
+  | TYPE_STRING{ `String }
   | TYPE_INT   { `Int }
   | id = IDENT { `Custom id }
 ;
@@ -185,6 +187,8 @@ expr:
     { Number i }
   | b = BOOL
     { Boolean b }
+  | s = STRING
+    { String s }
   | left = expr; SEMICOLON; right = expr
     { Let { id="_"; annot=`Unit; value=left; body=right } }
 ;

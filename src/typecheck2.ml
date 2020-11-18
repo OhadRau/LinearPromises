@@ -12,7 +12,7 @@ let resolveUserType userTypes = function
 (* must_use decides whether values of a type must be consumed. If a type contains
    a Promise* then it must be used, otherwise it does not need to be used. *)
 let rec must_use_ userTypes history = function
-  | `Int | `Bool | `Unit -> false
+  | `Int | `Bool | `Unit | `String -> false
   | `Promise t -> must_use userTypes (t :> ty)
   | `Custom c when List.mem c history -> false
   | `Custom c -> begin
@@ -47,7 +47,7 @@ end
 
 let rec free env = function
   | Variable v -> if not (Vars.mem v env) then Vars.singleton v else Vars.empty
-  | Unit | Number _ | Boolean _ -> Vars.empty
+  | Unit | Number _ | Boolean _ | String _ -> Vars.empty
   | Infix { left; right; _ } ->
     Vars.union (free env left) (free env right)
   | Let { id; value; body; _ } ->
@@ -181,6 +181,7 @@ let rec typecheck userTypes env expr = match expr with
   | Unit when env_complete userTypes env expr -> `Unit
   | Number _ when env_complete userTypes env expr -> `Int
   | Boolean _ when env_complete userTypes env expr -> `Bool
+  | String _ when env_complete userTypes env expr -> `String
   | Variable var when Env.mem var env && env_complete userTypes env expr ->
     let gamma, _ = split userTypes env (Variable var) (Unit) |> Option.get in
     Env.find var gamma
@@ -318,7 +319,7 @@ let rec typecheck userTypes env expr = match expr with
     if typecheck userTypes env_cond whileCond = `Bool then
       typecheck userTypes env_body whileBody
     else failwith "While expression expects boolean condition"
-  | Unit | Number _ | Boolean _ | ConstructRecord _ | ConstructUnion _
+  | Unit | Number _ | Boolean _ | String _ | ConstructRecord _ | ConstructUnion _
   | RecordAccess _ | Promise _ ->
     failwith ("Leftover variables in env in expr: " ^ string_of_expr expr)
 

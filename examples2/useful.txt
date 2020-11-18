@@ -16,6 +16,7 @@ func future(): Promise(Int) begin
 end
 
 func doubleInt(n: Int): Int begin
+  let q: String = "hello" in
   n + n
 end
 

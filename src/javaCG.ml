@@ -21,6 +21,7 @@ let make_id =
 let rec java_type = function
   | `Int -> "Integer"
   | `Bool -> "Boolean"
+  | `String -> "String"
   | `Unit -> "Unit" (* Unit class *)
   | `Custom name -> name
   | `Promise k -> Printf.sprintf "Promise<%s>" (java_type (k :> ty))
@@ -77,6 +78,7 @@ and emit userTypes ?(in_expr=false) ?(is_final=false) = function
   | Unit -> "Unit.the"
   | Number n -> string_of_int n
   | Boolean b -> string_of_bool b
+  | String s -> "\"" ^ String.escaped s ^ "\""
   | Infix { mode=#compare as mode; left; right } ->
     Printf.sprintf "(%s).compareTo(%s) %s 0"
       (emit userTypes ~in_expr:true left)
