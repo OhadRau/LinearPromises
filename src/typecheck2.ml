@@ -308,7 +308,9 @@ let rec typecheck userTypes env expr = match expr with
     begin match split_sequence userTypes env [first; last; forBody] with
       | [env_first; env_last; env_body] ->
         let env_body = Env.add name `Int env_body in
-        if typecheck userTypes env_first first = `Int &&
+        if Env.exists (fun _name ty -> must_use userTypes ty) env_body then
+          failwith "Loop body cannot contain any must-use variables"
+        else if typecheck userTypes env_first first = `Int &&
            typecheck userTypes env_last last = `Int
         then typecheck userTypes env_body forBody
         else failwith "For expression expects integer bounds"
@@ -316,7 +318,9 @@ let rec typecheck userTypes env expr = match expr with
     end
   | While { whileCond; whileBody } ->
     let env_cond, env_body = split userTypes env whileCond whileBody |> Option.get in
-    if typecheck userTypes env_cond whileCond = `Bool then
+    if Env.exists (fun _name ty -> must_use userTypes ty) env_body then
+      failwith "Loop body cannot contain any must-use variables"
+    else if typecheck userTypes env_cond whileCond = `Bool then
       typecheck userTypes env_body whileBody
     else failwith "While expression expects boolean condition"
   | Unit | Number _ | Boolean _ | String _ | ConstructRecord _ | ConstructUnion _
