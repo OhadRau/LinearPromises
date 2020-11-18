@@ -76,10 +76,7 @@ let rec free env = function
   | Promise { read; write; promiseBody; _ } ->
     let env = Vars.add read (Vars.add write env) in
     free env promiseBody
-  | Write { newValue; unsafe=true; _ } ->
-    (* If we perform an unsafe write, this should not count as consuming the Promise*. *)
-    free env newValue
-  | Write { promiseStar; newValue; unsafe=false } ->
+  | Write { promiseStar; newValue; _ } ->
     Vars.union (free env promiseStar) (free env newValue)
   | Read { promise } ->
     free env promise
@@ -292,11 +289,12 @@ let rec typecheck userTypes env expr = match expr with
   | Promise { read; write; ty; promiseBody } when env_complete userTypes env expr ->
     let env = env |> Env.add read (`Promise ty) |> Env.add write (`PromiseStar ty) in
     typecheck userTypes env promiseBody
-  | Write { promiseStar; newValue; _ } ->
+  | Write { promiseStar; newValue; unsafe } ->
     let gamma_promise, gamma_value = split userTypes env promiseStar newValue |> Option.get in
     let value_ty = typecheck userTypes gamma_value newValue in
     begin match typecheck userTypes gamma_promise promiseStar with
-      | `PromiseStar ty when value_ty = (ty :> ty) -> `Unit
+      | `PromiseStar ty when value_ty = (ty :> ty) && not unsafe -> `Unit
+      | `Promise ty when value_ty = (ty :> ty) && unsafe -> `Unit
       | _ -> failwith ("Expected promise of type " ^ string_of_ty value_ty)
     end
   | Read { promise } ->
