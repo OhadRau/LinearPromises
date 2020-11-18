@@ -2,50 +2,31 @@
 %token <int>    INT
 %token <string> IDENT
 
-%token FUNC
-%token UNION
-%token RECORD
-%token BEGIN
-%token END
+%token FUNC UNION RECORD
+%token BEGIN END
 
-%token LET
-%token IN
-%token IF
+%token LET IN
+%token IF THEN ELSE
 %token MATCH
-%token THEN
-%token ELSE
-%token FOR
-%token TO
+%token FOR TO
 %token WHILE
 %token PROMISE
 %token ASYNC
 
-%token TYPE_UNIT
-%token TYPE_BOOL
-%token TYPE_INT
-%token TYPE_PROMISE
+%token TYPE_UNIT TYPE_BOOL TYPE_INT TYPE_PROMISE
 
 %token EQUAL
-%token IS_EQUAL
-%token NOT_EQUAL
-%token LESS_THAN
-%token LESS_THAN_EQUAL
-%token GREATER_THAN
-%token GREATER_THAN_EQUAL
+%token IS_EQUAL NOT_EQUAL LESS_THAN LESS_THAN_EQUAL GREATER_THAN GREATER_THAN_EQUAL
 %token DOT
-%token LEFT_PAREN
-%token RIGHT_PAREN
-%token LEFT_BRACKET
-%token RIGHT_BRACKET
-%token LEFT_BRACE
-%token RIGHT_BRACE
+%token LEFT_PAREN RIGHT_PAREN
+%token LEFT_BRACKET RIGHT_BRACKET
+%token LEFT_BRACE RIGHT_BRACE
 %token COMMA
 %token STAR
 %token COLON
 %token SEMICOLON
 %token RIGHT_ARROW
-%token LEFT_ARROW
-%token LEFT_TILDE_ARROW
+%token LEFT_ARROW LEFT_TILDE_ARROW
 %token QUESTION
 
 %token EOF
