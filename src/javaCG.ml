@@ -294,15 +294,7 @@ public class %s {
     return Unit.the;
   }
 
-  private static Integer addInt(Integer a, Integer b) {
-    return a + b;
-  }
-
-  private static Boolean eqInt(Integer a, Integer b) {
-    return a.equals(b);
-  }
-
- private static Unit printInt(Integer b) {
+  private static Unit printInt(Integer b) {
     System.out.println(b);
     return Unit.the;
   }

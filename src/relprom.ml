@@ -36,8 +36,6 @@ let read_file eval filename =
 let () =
   let eval program =
     let gamma = Env.empty |> Env.add "unsafeWrite" (`Function ([`Promise `Int; `Int], `Unit))
-                          |> Env.add "addInt" (`Function ([`Int; `Int], `Int))
-                          |> Env.add "eqInt" (`Function ([`Int; `Int], `Bool))
                           |> Env.add "printInt" (`Function ([`Int], `Unit))
                           |> Env.add "printBool" (`Function ([`Bool], `Unit))
                           |> load_env program.funcs in
