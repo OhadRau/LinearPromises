@@ -81,6 +81,10 @@ and emit userTypes ?(in_expr=false) ?(is_final=false) = function
     Printf.sprintf "(%s).compareTo(%s) %s 0"
       (emit userTypes ~in_expr:true left)
       (emit userTypes ~in_expr:true right) (string_of_compare mode)
+  | Infix { mode=#arithmetic as mode; left; right } ->
+    Printf.sprintf "(%s) %s (%s)"
+      (emit userTypes ~in_expr:true left) (string_of_arithmetic mode)
+      (emit userTypes ~in_expr:true right)
   | Apply { fn; args } ->
     Printf.sprintf "%s(%s)"
       (emit userTypes ~in_expr:true fn) (emit_args userTypes args)

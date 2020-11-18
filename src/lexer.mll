@@ -73,6 +73,10 @@ and read = parse
   | "<="      { LESS_THAN_EQUAL }
   | '>'       { GREATER_THAN }
   | ">="      { GREATER_THAN_EQUAL }
+  | '+'       { ADD }
+  | '-'       { SUB }
+  | '*'       { MUL }
+  | '/'       { DIV }
   | '.'       { DOT }
   | '('       { LEFT_PAREN }
   | ')'       { RIGHT_PAREN }

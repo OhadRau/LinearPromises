@@ -17,6 +17,7 @@
 
 %token EQUAL
 %token IS_EQUAL NOT_EQUAL LESS_THAN LESS_THAN_EQUAL GREATER_THAN GREATER_THAN_EQUAL
+%token ADD SUB MUL DIV
 %token DOT
 %token LEFT_PAREN RIGHT_PAREN
 %token LEFT_BRACKET RIGHT_BRACKET
@@ -35,6 +36,8 @@
 %nonassoc ASYNC
 %nonassoc LEFT_ARROW LEFT_TILDE_ARROW
 %nonassoc IS_EQUAL NOT_EQUAL LESS_THAN LESS_THAN_EQUAL GREATER_THAN GREATER_THAN_EQUAL
+%left ADD SUB
+%left MUL DIV
 %nonassoc QUESTION
 %nonassoc DOT
 %nonassoc LEFT_PAREN
@@ -126,6 +129,14 @@ expr:
     { Unit }
   | LEFT_PAREN; e = expr; RIGHT_PAREN
     { e }
+  | left = expr; MUL; right = expr
+    { Infix { mode=`Mul; left; right } }
+  | left = expr; DIV; right = expr
+    { Infix { mode=`Div; left; right } }
+  | left = expr; ADD; right = expr
+    { Infix { mode=`Add; left; right } }
+  | left = expr; SUB; right = expr
+    { Infix { mode=`Sub; left; right } }
   | left = expr; IS_EQUAL; right = expr
     { Infix { mode=`Eq; left; right } }
   | left = expr; NOT_EQUAL; right = expr

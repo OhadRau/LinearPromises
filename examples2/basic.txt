@@ -10,7 +10,7 @@ func writeToAll(l: List, v: Int): Unit begin
     -- this shouldn't be hard to fix with something like SSA but I'm lazy
     Cons[p, l] ->
       p <- v;
-      writeToAll(l, addInt(v, 1))
+      writeToAll(l, v + 1)
   end
 end
 
@@ -19,7 +19,7 @@ func buildList(v: Int): List begin
     Nil[]
   else
     promise r, w: Int in
-    Cons[w, buildList(addInt(v, -1))]
+    Cons[w, buildList(v - 1)]
   end
 end
 

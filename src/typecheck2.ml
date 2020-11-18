@@ -190,6 +190,11 @@ let rec typecheck userTypes env expr = match expr with
     if typecheck userTypes gamma_left left = typecheck userTypes gamma_right right then
       `Bool
     else failwith "Comparison expects both arguments to have the same type"
+  | Infix { mode = #arithmetic; left; right } ->
+    let gamma_left, gamma_right = split userTypes env left right |> Option.get in
+    if typecheck userTypes gamma_left left = `Int && typecheck userTypes gamma_right right = `Int then
+      `Int
+    else failwith "Comparison expects both arguments to be integers"
   | Let { id; annot; value; body } ->
     let gamma_value, gamma_body = split userTypes env value body |> Option.get in
     let ty_value = typecheck userTypes gamma_value value in

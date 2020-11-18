@@ -16,7 +16,7 @@ func future(): Promise(Int) begin
 end
 
 func doubleInt(n: Int): Int begin
-  addInt(n, n)
+  n + n
 end
 
 func main(): Unit begin

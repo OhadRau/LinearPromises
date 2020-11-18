@@ -3,8 +3,8 @@ func mult(m: Int, n: Int): Int begin
   else
     if m == 1 then n
     else
-      let x: Int = mult(addInt(m, -1), n) in
-      addInt(n, x)
+      let x: Int = mult(m - 1, n) in
+      n + x
     end
   end
 end

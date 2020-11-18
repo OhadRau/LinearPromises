@@ -59,7 +59,11 @@ type compare = [
   `Eq | `Neq | `Lt | `Lte | `Gt | `Gte
 ]
 
-type infix = compare
+type arithmetic = [
+  `Add | `Sub | `Mul | `Div
+]
+
+type infix = [compare | arithmetic]
 
 let string_of_compare = function
   | `Eq -> "=="
@@ -69,8 +73,15 @@ let string_of_compare = function
   | `Gt -> ">"
   | `Gte -> ">="
 
+let string_of_arithmetic = function
+  | `Add -> "+"
+  | `Sub -> "-"
+  | `Mul -> "*"
+  | `Div -> "/"
+
 let string_of_infix = function
   | #compare as comp -> string_of_compare comp
+  | #arithmetic as arith -> string_of_arithmetic arith
 
 type pattern = {
   patCtor: string;
