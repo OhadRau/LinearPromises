@@ -1,0 +1,6 @@
+func main(): Unit begin
+  let s: String = "hello" in
+  for i = 0 to length(s) begin
+    println(concat(intToString(i), concat(": ", charAt(s, i))))
+  end
+end

@@ -304,6 +304,22 @@ public class %s {
     return b.toString();
   }
 
+  private static String charAt(String s, Integer i) {
+    return ((Character) s.charAt(i)).toString();
+  }
+
+  private static String substring(String s, Integer a, Integer b) {
+    return s.substring(a, b);
+  }
+
+  private static String concat(String a, String b) {
+    return a + b;
+  }
+
+  private static Integer length(String s) {
+    return s.length();
+  }
+
   private static Unit print(String s) {
     System.out.print(s);
     return Unit.the;

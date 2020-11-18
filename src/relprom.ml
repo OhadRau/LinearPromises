@@ -40,6 +40,10 @@ let () =
                           |> Env.add "boolToString" (`Function ([`Bool], `String))
                           |> Env.add "print" (`Function ([`String], `Unit))
                           |> Env.add "println" (`Function ([`String], `Unit))
+                          |> Env.add "charAt" (`Function ([`String; `Int], `String))
+                          |> Env.add "substring" (`Function ([`String; `Int; `Int], `String))
+                          |> Env.add "concat" (`Function ([`String; `String], `String))
+                          |> Env.add "length" (`Function ([`String], `Int))
                           |> load_env program.funcs in
     let typecheck_and_print types func =
       print_endline (string_of_expr func.expr);
