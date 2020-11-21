@@ -1,0 +1,45 @@
+func countLines_(text: String, i: Int, count: Int): Int begin
+  if i < length(text) then
+    if charAt(text, i) == "\n" then
+      countLines_(text, i + 1, count + 1)
+    else
+      countLines_(text, i + 1, count)
+    end
+  else
+    count
+  end
+end
+
+func countLines(text: String): Int begin
+  countLines_(text, 0, 0)
+end
+
+func countOccurences(needle: String, haystack: String): Int begin
+  promise count, initCount: Int in
+  initCount <- 0;
+  for i = 0 to length(haystack) begin
+    promise ok, initOk: Bool in
+    initOk <- true;
+    for j = 0 to length(needle) begin
+      if i + j < length(haystack) && charAt(needle, j) == charAt(haystack, i + j) then
+        ()
+      else
+        ok <~ false
+      end
+    end;
+    if ?ok then count <~ ?count + 1 else () end
+  end;
+  ?count
+end
+
+func readFileAsync(filename: String): Promise(String) begin
+  promise getText, setText: String in
+  async (setText <- readFile(filename));
+  getText
+end
+
+func main(): Unit begin
+  let text: Promise(String) = readFileAsync("hello.txt") in
+  async println(concat("Num lines: ", intToString(countLines(?text))));
+  async println(concat("Num words: ", intToString(countOccurences("blah", ?text))))
+end

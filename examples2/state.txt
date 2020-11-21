@@ -1,0 +1,12 @@
+func count_and_sum(max: Int): Int begin
+  promise counter, writeCounter: Int in
+  writeCounter <- 0;
+  for i = 0 to max begin
+    counter <~ ?counter + i
+  end;
+  ?counter
+end
+
+func main(): Unit begin
+  println(intToString(count_and_sum(10)))
+end
