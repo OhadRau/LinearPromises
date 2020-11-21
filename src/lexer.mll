@@ -92,6 +92,9 @@ and read = parse
   | "<="      { LESS_THAN_EQUAL }
   | '>'       { GREATER_THAN }
   | ">="      { GREATER_THAN_EQUAL }
+  | "&&"      { AND }
+  | "||"      { OR }
+  | '!'       { NOT }
   | '+'       { ADD }
   | '-'       { SUB }
   | '*'       { MUL }

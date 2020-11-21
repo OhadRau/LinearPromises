@@ -87,6 +87,12 @@ and emit userTypes ?(in_expr=false) ?(is_final=false) = function
     Printf.sprintf "(%s) %s (%s)"
       (emit userTypes ~in_expr:true left) (string_of_arithmetic mode)
       (emit userTypes ~in_expr:true right)
+  | Infix { mode=#logical as mode; left; right } ->
+    Printf.sprintf "(%s) %s (%s)"
+      (emit userTypes ~in_expr:true left) (string_of_logical mode)
+      (emit userTypes ~in_expr:true right)
+  | Not e ->
+    Printf.sprintf "!(%s)" (emit userTypes ~in_expr:true e)
   | Apply { fn; args } ->
     Printf.sprintf "%s(%s)"
       (emit userTypes ~in_expr:true fn) (emit_args userTypes args)

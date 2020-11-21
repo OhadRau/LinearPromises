@@ -50,6 +50,7 @@ let rec free env = function
   | Unit | Number _ | Boolean _ | String _ -> Vars.empty
   | Infix { left; right; _ } ->
     Vars.union (free env left) (free env right)
+  | Not e -> free env e
   | Let { id; value; body; _ } ->
     let env_body = Vars.add id env in
     Vars.union (free env value) (free env_body body)
@@ -192,7 +193,16 @@ let rec typecheck userTypes env expr = match expr with
     let gamma_left, gamma_right = split userTypes env left right |> Option.get in
     if typecheck userTypes gamma_left left = `Int && typecheck userTypes gamma_right right = `Int then
       `Int
-    else failwith "Comparison expects both arguments to be integers"
+    else failwith "Arithmetic expects both arguments to be integers"
+  | Infix { mode = #logical; left; right } ->
+    let gamma_left, gamma_right = split userTypes env left right |> Option.get in
+    if typecheck userTypes gamma_left left = `Bool && typecheck userTypes gamma_right right = `Bool then
+      `Bool
+    else failwith "Logic expects both arguments to be bools"
+  | Not e ->
+    if typecheck userTypes env e = `Bool then
+      `Bool
+    else failwith "Logical not expects argument to be bool"
   | Let { id; annot; value; body } ->
     let gamma_value, gamma_body = split userTypes env value body |> Option.get in
     let ty_value = typecheck userTypes gamma_value value in

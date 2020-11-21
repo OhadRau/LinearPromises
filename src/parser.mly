@@ -18,6 +18,7 @@
 
 %token EQUAL
 %token IS_EQUAL NOT_EQUAL LESS_THAN LESS_THAN_EQUAL GREATER_THAN GREATER_THAN_EQUAL
+%token AND OR NOT
 %token ADD SUB MUL DIV
 %token DOT
 %token LEFT_PAREN RIGHT_PAREN
@@ -36,9 +37,12 @@
 %right SEMICOLON IN
 %nonassoc ASYNC
 %nonassoc LEFT_ARROW LEFT_TILDE_ARROW
+%left OR
+%left AND
 %nonassoc IS_EQUAL NOT_EQUAL LESS_THAN LESS_THAN_EQUAL GREATER_THAN GREATER_THAN_EQUAL
 %left ADD SUB
 %left MUL DIV
+%nonassoc NOT
 %nonassoc QUESTION
 %nonassoc DOT
 %nonassoc LEFT_PAREN
@@ -139,6 +143,14 @@ expr:
     { Infix { mode=`Add; left; right } }
   | left = expr; SUB; right = expr
     { Infix { mode=`Sub; left; right } }
+
+  | left = expr; AND; right = expr
+    { Infix { mode=`And; left; right } }
+  | left = expr; OR; right = expr
+    { Infix { mode=`Or; left; right } }
+  | NOT; e = expr
+    { Not e }
+
   | left = expr; IS_EQUAL; right = expr
     { Infix { mode=`Eq; left; right } }
   | left = expr; NOT_EQUAL; right = expr

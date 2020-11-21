@@ -64,7 +64,11 @@ type arithmetic = [
   `Add | `Sub | `Mul | `Div
 ]
 
-type infix = [compare | arithmetic]
+type logical = [
+  `And | `Or
+]
+
+type infix = [compare | arithmetic | logical]
 
 let string_of_compare = function
   | `Eq -> "=="
@@ -80,9 +84,14 @@ let string_of_arithmetic = function
   | `Mul -> "*"
   | `Div -> "/"
 
+let string_of_logical = function
+  | `And -> "&&"
+  | `Or -> "||"
+
 let string_of_infix = function
   | #compare as comp -> string_of_compare comp
   | #arithmetic as arith -> string_of_arithmetic arith
+  | #logical as log -> string_of_logical log
 
 type pattern = {
   patCtor: string;
@@ -96,6 +105,7 @@ and expr =
   | Number of int
   | Boolean of bool
   | String of string
+  | Not of expr
   | Infix of { mode: infix; left: expr; right: expr }
   | Let of { id: string; annot: ty; value: expr; body: expr }
   | If of { condition: expr; then_branch: expr; else_branch: expr }
@@ -121,6 +131,8 @@ let rec string_of_expr = function
   | Number n -> string_of_int n
   | Boolean b -> string_of_bool b
   | String s -> "\"" ^ String.escaped s ^ "\""
+  | Not e ->
+    "!(" ^ string_of_expr e ^ ")"
   | Infix { mode; left; right } ->
     "(" ^ string_of_expr left ^ ") " ^ string_of_infix mode ^ " (" ^ string_of_expr right ^ ")"
   | Let { id; annot; value; body } ->

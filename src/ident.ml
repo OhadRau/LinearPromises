@@ -17,6 +17,7 @@ let rec make_unique env = function
   | Number n -> Number n
   | Boolean b -> Boolean b
   | String s -> String s
+  | Not e -> Not (make_unique env e)
   | Infix { mode; left; right } ->
     Infix { mode; left = make_unique env left; right = make_unique env right }
   | Let { id; annot; value; body } ->
