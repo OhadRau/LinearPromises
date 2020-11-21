@@ -135,6 +135,7 @@ expr:
     { Unit }
   | LEFT_PAREN; e = expr; RIGHT_PAREN
     { e }
+
   | left = expr; MUL; right = expr
     { Infix { mode=`Mul; left; right } }
   | left = expr; DIV; right = expr
@@ -163,6 +164,7 @@ expr:
     { Infix { mode=`Gt; left; right } }
   | left = expr; GREATER_THAN_EQUAL; right = expr
     { Infix { mode=`Gte; left; right } }
+
   | LET; id = IDENT; COLON; annot = type_expr; EQUAL; value = expr; IN; body = expr
     { Let { id; annot; value; body } }
   | MATCH; matchValue = expr; BEGIN; matchCases = match_cases; END
@@ -179,6 +181,7 @@ expr:
     { ConstructRecord { recordCtor=ctor; recordArgs=args } }
   | record = expr; DOT; field = IDENT
     { RecordAccess { record; field } }
+
   | PROMISE; read = IDENT; COMMA; write = IDENT; COLON; ty = primitive_type; IN; promiseBody = expr
     { Promise { read; write; ty; promiseBody } }
   | promiseStar = expr; LEFT_ARROW; newValue = expr
@@ -189,10 +192,12 @@ expr:
     { Read { promise } }
   | ASYNC; application = expr
     { Async { application } }
+
   | FOR; name = IDENT; EQUAL; first = expr; TO; last = expr; BEGIN; forBody = expr; END
     { For { name; first; last; forBody } }
   | WHILE; whileCond = expr; BEGIN; whileBody = expr; END
     { While { whileCond; whileBody } }
+
   | v = IDENT
     { Variable v }
   | i = INT
