@@ -80,15 +80,15 @@ and emit userTypes ?(in_expr=false) ?(is_final=false) = function
   | Boolean b -> string_of_bool b
   | String s -> "\"" ^ String.escaped s ^ "\""
   | Infix { mode=#compare as mode; left; right } ->
-    Printf.sprintf "(%s).compareTo(%s) %s 0"
+    Printf.sprintf "Boolean.valueOf((%s).compareTo(%s) %s 0)"
       (emit userTypes ~in_expr:true left)
       (emit userTypes ~in_expr:true right) (string_of_compare mode)
   | Infix { mode=#arithmetic as mode; left; right } ->
-    Printf.sprintf "(%s) %s (%s)"
+    Printf.sprintf "Integer.valueOf((%s) %s (%s))"
       (emit userTypes ~in_expr:true left) (string_of_arithmetic mode)
       (emit userTypes ~in_expr:true right)
   | Infix { mode=#logical as mode; left; right } ->
-    Printf.sprintf "(%s) %s (%s)"
+    Printf.sprintf "Boolean.valueOf((%s) %s (%s))"
       (emit userTypes ~in_expr:true left) (string_of_logical mode)
       (emit userTypes ~in_expr:true right)
   | Not e ->
