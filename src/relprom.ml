@@ -40,6 +40,7 @@ let () =
                           |> Env.add "boolToString" (`Function ([`Bool], `String))
                           |> Env.add "print" (`Function ([`String], `Unit))
                           |> Env.add "println" (`Function ([`String], `Unit))
+                          |> Env.add "readFile" (`Function ([`String], `String))
                           |> Env.add "charAt" (`Function ([`String; `Int], `String))
                           |> Env.add "substring" (`Function ([`String; `Int; `Int], `String))
                           |> Env.add "concat" (`Function ([`String; `String], `String))

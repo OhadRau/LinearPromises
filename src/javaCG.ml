@@ -330,6 +330,16 @@ public class %s {
     return Unit.the;
   }
 
+  private static String readFile(String s) {
+    try {
+      return new String(
+        java.nio.file.Files.readAllBytes(
+          java.nio.file.Paths.get(s)));
+    } catch (java.io.IOException e) {
+      return "";
+    }
+  }
+
   public static void main(String[] args) {
     $_rt = new PromiseRuntime();
     main();
