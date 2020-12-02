@@ -217,7 +217,7 @@ let rec typecheck userTypes env expr = match expr with
     begin match Env.find fn env with
     | `Function (expected_arg_types, return_type) ->
       if check_sequence userTypes env expected_arg_types args then return_type
-      else failwith "Argument types for function differed from expected types"
+      else failwith ("Argument types for function '" ^ fn ^ "' differed from expected types")
     | ty -> failwith ("Attempted to use type " ^ string_of_ty ty ^ " as a function")
     end
   | Apply { fn = _; _ } -> failwith (

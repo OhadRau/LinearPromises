@@ -12,7 +12,8 @@ let original_name id =
   String.split_on_char '%' id |> List.hd
 
 let rec make_unique env = function
-  | Variable var -> Variable (Env.find var env)
+  | Variable var when Env.mem var env -> Variable (Env.find var env)
+  | Variable var -> failwith ("Unknown identifier: " ^ var)
   | Unit -> Unit
   | Number n -> Number n
   | Boolean b -> Boolean b
