@@ -134,7 +134,7 @@ and emit userTypes ?(in_expr=false) ?(is_final=false) = function
     end expectedCases in
     let branches = List.map begin fun (args, result) ->
       Printf.sprintf "(%s) -> {%s}"
-        (String.concat ", " args) (emit userTypes ~in_expr:false result)
+        (String.concat ", " args) (emit userTypes ~in_expr:false ~is_final:true result)
     end ordered |> String.concat ", " in
     Printf.sprintf "(%s).match(%s)%s"
       (emit userTypes ~in_expr:true matchValue) branches (if in_expr then "" else ";")
@@ -157,7 +157,7 @@ and emit userTypes ?(in_expr=false) ?(is_final=false) = function
     let branches =
       Printf.sprintf "(%s) -> {%s}"
         (String.concat ", " (List.map (fun (_, v) -> v) ordered))
-        (emit userTypes ~in_expr:false matchBody) in
+        (emit userTypes ~in_expr:false ~is_final:true matchBody) in
     Printf.sprintf "(%s).match(%s)%s"
       (emit userTypes ~in_expr:true matchRecord) branches (if in_expr then "" else ";")
   end
