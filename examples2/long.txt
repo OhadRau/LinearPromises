@@ -5,16 +5,40 @@ record BufferedReader begin
   finished: Bool
 end
 
-func buffered(text: String): BufferedReader begin
-  BufferedReader {
+union IntList begin
+  Nil[];
+  Cons[Int, IntList]
+end
+
+func listLength(list: IntList): Int begin
+  match list begin
+    Nil[] -> 0
+    Cons[x, rest] -> 1 + listLength(rest)
+  end
+end
+
+func createList(): Promise(IntList) begin
+  promise list, initList: IntList in
+  initList <- Nil[];
+  list
+end
+
+func append(list: Promise(IntList), x: Int): Unit begin
+  list <~ Cons[x, ?list]
+end
+
+func buffered(text: String): Promise(BufferedReader) begin
+  promise reader, initReader: BufferedReader in
+  initReader <- BufferedReader {
     text=text,
     index=0,
     line="",
     finished=false
-  }
+  };
+  reader
 end
 
-func nextLine(reader: BufferedReader): BufferedReader begin
+func tryNextLine(reader: BufferedReader): BufferedReader begin
   if reader.finished || reader.index >= length(reader.text) then
     BufferedReader {
       text="",
@@ -39,9 +63,18 @@ func nextLine(reader: BufferedReader): BufferedReader begin
         line=reader.line,
         finished=false
       } in
-      nextLine(new_reader)
+      tryNextLine(new_reader)
     end
   end
+end
+
+func isFinished(reader: Promise(BufferedReader)): Bool begin
+  (?reader).finished
+end
+
+func nextLine(reader: Promise(BufferedReader)): String begin
+  reader <~ tryNextLine(?reader);
+  (?reader).line
 end
 
 func parseDigit(text: String): Int begin
@@ -88,12 +121,24 @@ func readAsync(file: String): Promise(String) begin
 end
 
 func printLines(file: String): Unit begin
-  promise reader, initReader: BufferedReader in
-  initReader <- buffered(?readAsync(file));
-  while !(?reader).finished begin
-    reader <~ nextLine(?reader);
-    println((?reader).line)
+  let reader = buffered(?readAsync(file)) in
+  while !isFinished(reader) begin
+    let line = nextLine(reader) in
+    println(line)
   end
+end
+
+func countLines(text: String): Int begin
+  promise count, initCount: Int in
+  initCount <- 0;
+  for i = 0 to length(text) begin
+    if charAt(text, i) == "\n" then
+      count <~ ?count + 1
+    else
+      ()
+    end
+  end;
+  ?count
 end
 
 func pow(num: Int, exp: Int): Int begin
@@ -136,9 +181,51 @@ func min(a: Int, b: Int): Int begin
   end
 end
 
+func sumLinesSquaredOrCubed(file: String): Int begin
+  promise sum, initSum: Int in
+  initSum <- 0;
+  let text = ?readAsync(file) in
+  let numLines = countLines(text) in
+  let reader = buffered(text) in
+  for i = 0 to numLines begin
+    let line = nextLine(reader) in
+    let number = parseInt(line) in
+    let squared = square(number) in
+    let cubed = cube(number) in
+    let larger = max(squared, cubed) in
+    sum <~ ?sum + larger
+  end;
+  ?sum
+end
+
+func buildList(file: String): IntList begin
+  let reader = buffered(readFile(file)) in
+  let list = createList() in
+  while !isFinished(reader) begin
+    let line = nextLine(reader) in
+    let num = parseInt(line) in
+    append(list, num)
+  end;
+  ?list
+end
+
+func listMax(list: IntList): Int begin
+  match list begin
+    Nil[] -> 0 -- Should really be intMin to handle negatives correctly...
+    Cons[x, rest] ->
+      max(x, listMax(rest))
+  end
+end
+
 func main(): Unit begin
   printLines("Long.java");
   for i = min(square(3), cube(2)) to max(square(3), cube(2)) begin
     println(concat("On iteration: ", intToString(i)))
-  end
+  end;
+  let sum = sumLinesSquaredOrCubed("numbers.txt") in
+  println(intToString(min(0, sum)));
+  let intList = buildList("numbers.txt") in
+  let maxNumber = listMax(intList) in
+  let announcement = concat("Maximum number was ", intToString(maxNumber)) in
+  println(announcement)
 end
