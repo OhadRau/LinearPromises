@@ -25,7 +25,6 @@
 %token LEFT_BRACKET RIGHT_BRACKET
 %token LEFT_BRACE RIGHT_BRACE
 %token COMMA
-%token STAR
 %token COLON
 %token SEMICOLON
 %token RIGHT_ARROW
@@ -115,7 +114,7 @@ type_expr:
 *)
   | ty = primitive_type
      { ty :> Lang.ty }
-  | TYPE_PROMISE STAR LEFT_PAREN; t = primitive_type; RIGHT_PAREN
+  | TYPE_PROMISE MUL LEFT_PAREN; t = primitive_type; RIGHT_PAREN
      { `PromiseStar t }
   | TYPE_PROMISE LEFT_PAREN; t = primitive_type; RIGHT_PAREN
      { `Promise t }

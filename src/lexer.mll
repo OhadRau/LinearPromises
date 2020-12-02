@@ -107,7 +107,6 @@ and read = parse
   | '{'       { LEFT_BRACE }
   | '}'       { RIGHT_BRACE }
   | ','       { COMMA }
-  | '*'       { STAR }
   | ':'       { COLON }
   | ';'       { SEMICOLON }
   | "->"      { RIGHT_ARROW }
