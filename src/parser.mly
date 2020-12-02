@@ -166,6 +166,8 @@ expr:
 
   | LET; id = IDENT; COLON; annot = type_expr; EQUAL; value = expr; IN; body = expr
     { Let { id; annot; value; body } }
+  | LET; id = IDENT; EQUAL; value = expr; IN; body = expr
+    { Let { id; annot=`Infer (ref None); value; body } }
   | MATCH; matchValue = expr; BEGIN; matchCases = match_cases; END
     { Match { matchValue; matchCases } }
   | MATCH; matchRecord = expr; BEGIN; LEFT_BRACE; matchArgs = named_pattern_args; RIGHT_BRACE; RIGHT_ARROW; matchBody = expr; END

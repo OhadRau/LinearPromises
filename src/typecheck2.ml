@@ -24,6 +24,8 @@ let rec must_use_ userTypes history = function
   end
   | `PromiseStar _ -> true
   | `Function _ -> false
+  | `Infer { contents = Some ty } -> must_use_ userTypes history ty
+  | `Infer { contents = None } -> failwith "Cannot determine whether an uninferred type must be used"
 
 and must_use =
   let table = Hashtbl.create 1000 in
@@ -206,12 +208,18 @@ let rec typecheck userTypes env expr = match expr with
   | Let { id; annot; value; body } ->
     let gamma_value, gamma_body = split userTypes env value body |> Option.get in
     let ty_value = typecheck userTypes gamma_value value in
-    if annot = ty_value then
-      let gamma_body = Env.add id annot gamma_body in
-      typecheck userTypes gamma_body body
-    else failwith (
-      "Mismatched types in let expression: got " ^ string_of_ty ty_value ^
-      ", expected " ^ string_of_ty annot)
+    begin match annot with
+      | `Infer real_ty ->
+        real_ty := Some ty_value;
+        let gamma_body = Env.add id ty_value gamma_body in
+        typecheck userTypes gamma_body body
+      | annot when annot = ty_value ->
+        let gamma_body = Env.add id ty_value gamma_body in
+        typecheck userTypes gamma_body body
+      | _ -> failwith (
+        "Mismatched types in let expression: got " ^ string_of_ty ty_value ^
+        ", expected " ^ string_of_ty annot)
+    end
   | Apply { fn = Variable fn; args } when Env.mem fn env ->
     (* Since the function is guaranteed to NOT be linear, we don't need to bother to split it from the environment *)
     begin match Env.find fn env with

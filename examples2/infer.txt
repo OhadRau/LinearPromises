@@ -1,0 +1,5 @@
+func main(): Unit begin
+  let x = 0 in
+  let str = intToString(x + 1) in
+  println(str)
+end

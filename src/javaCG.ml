@@ -27,6 +27,8 @@ let rec java_type = function
   | `Promise k -> Printf.sprintf "Promise<%s>" (java_type (k :> ty))
   | `PromiseStar k -> Printf.sprintf "Promise<%s>" (java_type (k :> ty))
   | `Function (_, _) -> failwith "Cannot create temp function variable"
+  | `Infer { contents = Some ty } -> java_type ty
+  | `Infer { contents = None } -> failwith "Inferred type was never populated"
 
 let rec emit_args userTypes = function
   | [] -> ""

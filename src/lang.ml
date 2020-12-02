@@ -5,7 +5,8 @@ type ty = [
   | primitive_ty
   | `Promise of primitive_ty
   | `PromiseStar of primitive_ty
-  | `Function of ty list * ty ]
+  | `Function of ty list * ty
+  | `Infer of ty option ref ]
 
 let rec string_of_ty = function
   | `Int -> "Int"
@@ -17,6 +18,8 @@ let rec string_of_ty = function
   | `PromiseStar ty -> "Promise*(" ^ string_of_ty (ty :> ty) ^ ")"
   | `Function (args, result) ->
      "(" ^ String.concat ", " (List.map string_of_ty args) ^ ") -> " ^ string_of_ty result
+  | `Infer { contents = Some ty } -> string_of_ty ty
+  | `Infer { contents = None } -> "???"
 
 type custom_ty =
   | Record of (string * ty) list
