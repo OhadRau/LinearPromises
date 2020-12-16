@@ -1,0 +1,38 @@
+-- Example from https://en.cppreference.com/w/cpp/thread/promise
+
+union IntVector begin
+  Nil[];
+  Cons[Int, IntVector]
+end
+
+func accumulate_(vector: IntVector, acc: Int): Int begin
+  match vector begin
+    Nil[] -> acc
+    Cons[x, xs] -> accumulate_(xs, acc + x)
+  end
+end
+
+func accumulate(
+  vector: IntVector, accumulate_promise: Promise*(Int)
+): Unit begin
+  let sum = accumulate_(vector, 0) in
+  accumulate_promise <- sum
+end
+
+func do_work(barrier: Promise*(Unit)): Unit begin
+  sleep(seconds(1));
+  barrier <- ()
+end
+
+func main(): Unit begin
+  let numbers =
+    Cons[1, Cons[2, Cons[3, Cons[4, Cons[5, Cons[6, Nil[]]]]]]] in
+  promise accumulate_future, accumulate_promise: Int in
+
+  async accumulate(numbers, accumulate_promise);
+  println(concat("result=", intToString(?accumulate_future)));
+
+  promise barrier_future, barrier: Unit in
+  async do_work(barrier);
+  ?barrier_future
+end
