@@ -304,6 +304,21 @@ public class %s {
     return Unit.the;
   }
 
+  private static Unit sleep(Integer time) {
+    try {
+      Thread.sleep(time.longValue());
+    } catch (Exception e) {}
+    return Unit.the;
+  }
+
+  private static Integer milliseconds(Integer n) {
+    return n;
+  }
+
+  private static Integer seconds(Integer n) {
+    return n * 1000;
+  }
+
   private static String intToString(Integer i) {
     return i.toString();
   }

@@ -31,33 +31,65 @@ let read_file eval filename =
     |> Filename.basename
     |> JavaCG.make_valid_java_ident
     |> String.capitalize_ascii in
-   read eval programName lexbuf
+  read eval programName lexbuf
 
-let () =
-  let eval program =
-    let gamma = Env.empty |> Env.add "unsafeWrite" (`Function ([`Promise `Int; `Int], `Unit))
-                          |> Env.add "intToString" (`Function ([`Int], `String))
-                          |> Env.add "boolToString" (`Function ([`Bool], `String))
-                          |> Env.add "print" (`Function ([`String], `Unit))
-                          |> Env.add "println" (`Function ([`String], `Unit))
-                          |> Env.add "readFile" (`Function ([`String], `String))
-                          |> Env.add "charAt" (`Function ([`String; `Int], `String))
-                          |> Env.add "substring" (`Function ([`String; `Int; `Int], `String))
-                          |> Env.add "concat" (`Function ([`String; `String], `String))
-                          |> Env.add "length" (`Function ([`String], `Int))
-                          |> load_env program.funcs in
-    let typecheck_and_print types func =
+let gamma_base = Env.from_bindings [
+  "unsafeWrite", `Function ([`Promise `Int; `Int], `Unit);
+  "sleep", `Function ([`Int], `Unit);
+  "milliseconds", `Function ([`Int], `Int);
+  "seconds", `Function ([`Int], `Int);
+  "intToString", `Function ([`Int], `String);
+  "boolToString", `Function ([`Bool], `String);
+  "print", `Function ([`String], `Unit);
+  "println", `Function ([`String], `Unit);
+  "readFile", `Function ([`String], `String);
+  "charAt", `Function ([`String; `Int], `String);
+  "substring", `Function ([`String; `Int; `Int], `String);
+  "concat", `Function ([`String; `String], `String);
+  "length", `Function ([`String], `Int)
+]
+
+let eval_program ~output_file ~verbose ~benchmark_typechecker program =
+  let output_file =
+    if !output_file = "" then program.programName ^ ".java"
+    else !output_file in
+  let gamma = gamma_base |> load_env program.funcs in
+  let typecheck types func =
+    if !verbose then begin
       print_endline (string_of_expr func.expr);
       print_endline "---------------";
-      let ty = typecheck_fn types gamma (Ident.preprocess_idents gamma func) in
+    end;
+    let ty = typecheck_fn types gamma (Ident.preprocess_idents gamma func) in
+    if !verbose then begin
       print_endline (func.funcName ^ ": " ^ string_of_ty ty);
-      print_endline "---------------" in
-    List.iter (typecheck_and_print program.types) program.funcs;
+      print_endline "---------------"
+    end in
+  if !benchmark_typechecker then begin
+    let start_time = Sys.time () in
+    for _ = 0 to 1000 do
+      List.iter (typecheck program.types) program.funcs;
+    done;
+    let end_time = Sys.time () in
+    Printf.printf "Completed type checking benchmark for program '%s' in: %f\n"
+      program.programName (end_time -. start_time)
+  end else begin
+    List.iter (typecheck program.types) program.funcs;
     let javaProgram = JavaCG.emit_program program in
-    print_endline javaProgram;
-    let javaFilename = program.programName ^ ".java" in
-    let oc = open_out javaFilename in
+    let oc = open_out output_file in
     output_string oc javaProgram;
-    close_out oc in
+    close_out oc
+  end
 
-  read_file eval (if Array.length Sys.argv > 1 then Sys.argv.(1) else "example.txt")
+let () =
+  let benchmark_typechecker = ref false
+  and verbose = ref false
+  and output_file = ref "" in
+  let spec = [
+    "--tybench", Arg.Set benchmark_typechecker, "Benchmark the typechecker";
+    "-v", Arg.Set verbose, "Print out extra debug information";
+    "--verbose", Arg.Set verbose, "Print out extra debug information";
+    "-o", Arg.Set_string output_file, "Set output file name"
+  ] in
+  Arg.parse spec (fun filename ->
+    read_file (eval_program ~benchmark_typechecker ~verbose ~output_file) filename)
+    "compiler [-o output_file] [-tybench] [-v|-verbose] <input_file>"
