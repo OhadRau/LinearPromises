@@ -176,6 +176,10 @@ let env_complete userTypes env expr =
   | Some _ -> true
   | None -> false
 
+(* Check whether an environment contains any linear variables *)
+let uses_linear userTypes env =
+  Env.exists (fun _name ty -> must_use userTypes ty) env
+
 (* typecheck : ty_decl list -> env -> expr -> ty *)
 let rec typecheck userTypes env expr = match expr with
   | Unit when env_complete userTypes env expr -> `Unit
@@ -324,7 +328,8 @@ let rec typecheck userTypes env expr = match expr with
     begin match split_sequence userTypes env [first; last; forBody] with
       | [env_first; env_last; env_body] ->
         let env_body = Env.add name `Int env_body in
-        if Env.exists (fun _name ty -> must_use userTypes ty) env_body then
+        (* The first is always evaluated once, but last can get re-evaluated *)
+        if uses_linear userTypes env_body || uses_linear userTypes env_last then
           failwith "Loop body cannot contain any must-use variables"
         else if typecheck userTypes env_first first = `Int &&
            typecheck userTypes env_last last = `Int
@@ -334,7 +339,7 @@ let rec typecheck userTypes env expr = match expr with
     end
   | While { whileCond; whileBody } ->
     let env_cond, env_body = split userTypes env whileCond whileBody |> Option.get in
-    if Env.exists (fun _name ty -> must_use userTypes ty) env_body then
+    if uses_linear userTypes env_body || uses_linear userTypes env_cond then
       failwith "Loop body cannot contain any must-use variables"
     else if typecheck userTypes env_cond whileCond = `Bool then
       typecheck userTypes env_body whileBody
