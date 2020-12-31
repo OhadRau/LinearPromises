@@ -49,7 +49,7 @@ let gamma_base = Env.from_bindings [
   "length", `Function ([`String], `Int)
 ]
 
-let eval_program ~output_file ~verbose ~benchmark_typechecker program =
+let eval_program ~output_file ~verbose ~benchmark_typechecker ~benchmark_pipeline program =
   let output_file =
     if !output_file = "" then program.programName ^ ".java"
     else !output_file in
@@ -64,6 +64,12 @@ let eval_program ~output_file ~verbose ~benchmark_typechecker program =
       print_endline (func.funcName ^ ": " ^ string_of_ty ty);
       print_endline "---------------"
     end in
+  let compile program =
+    List.iter (typecheck program.types) program.funcs;
+    let javaProgram = JavaCG.emit_program program in
+    let oc = open_out output_file in
+    output_string oc javaProgram;
+    close_out oc in
   if !benchmark_typechecker then begin
     let start_time = Sys.time () in
     for _ = 0 to 1000 do
@@ -72,24 +78,28 @@ let eval_program ~output_file ~verbose ~benchmark_typechecker program =
     let end_time = Sys.time () in
     Printf.printf "Completed type checking benchmark for program '%s' in: %f\n"
       program.programName (end_time -. start_time)
-  end else begin
-    List.iter (typecheck program.types) program.funcs;
-    let javaProgram = JavaCG.emit_program program in
-    let oc = open_out output_file in
-    output_string oc javaProgram;
-    close_out oc
-  end
+  end else if !benchmark_pipeline then begin
+    let start_time = Sys.time () in
+    for _ = 0 to 1000 do
+      compile program
+    done;
+    let end_time = Sys.time () in
+    Printf.printf "Completed benchmark for program '%s' in: %f\n"
+      program.programName (end_time -. start_time)
+  end else compile program
 
 let () =
   let benchmark_typechecker = ref false
+  and benchmark_pipeline = ref false
   and verbose = ref false
   and output_file = ref "" in
   let spec = [
     "--tybench", Arg.Set benchmark_typechecker, "Benchmark the typechecker";
+    "--bench", Arg.Set benchmark_pipeline, "Benchmark the entire pipeline";
     "-v", Arg.Set verbose, "Print out extra debug information";
     "--verbose", Arg.Set verbose, "Print out extra debug information";
     "-o", Arg.Set_string output_file, "Set output file name"
   ] in
   Arg.parse spec (fun filename ->
-    read_file (eval_program ~benchmark_typechecker ~verbose ~output_file) filename)
+    read_file (eval_program ~benchmark_typechecker ~benchmark_pipeline ~verbose ~output_file) filename)
     "compiler [-o output_file] [-tybench] [-v|-verbose] <input_file>"
