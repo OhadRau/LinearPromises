@@ -1,0 +1,9 @@
+func doIt(): Promise(String) begin
+  let numKeys = 1 in
+  promise p, resolve: String in
+  resolve <- "resolve called!";
+  for key = 0 to numKeys begin
+    resolve <- "inside resolve called"
+  end;
+  p
+end

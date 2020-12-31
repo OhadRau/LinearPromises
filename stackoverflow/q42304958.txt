@@ -1,0 +1,18 @@
+func http_post_login(user: String): String begin
+  concat(user, "-dummy")
+end
+
+func login(deferred: Promise(String), setDeferred: Promise*(String), user: String): Promise(String) begin
+  let result = http_post_login(user) in
+  setDeferred <- result;
+  deferred
+end
+
+func LoginService(): Unit begin
+  promise deferred, setDeferred: String in
+  let n = 1 in
+  for i = 1 to n begin
+  -- Can't really imitate events or closures, but this shows what would happen if events were able to repeat
+    login(deferred, "user")
+  end
+end

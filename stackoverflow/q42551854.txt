@@ -1,0 +1,17 @@
+func onClick(p: Promise*(Int), x: Int): Unit begin
+  -- Again, since we don't have events or closures
+  -- we can emulate it with a loop that sets the
+  -- promise an unknown number of times
+  while true begin
+    if false then
+      p <- x
+    else () end
+  end
+end
+
+func main(): Unit begin
+  promise myPromise, success: Int in
+  -- Simulate onClick events as asynchronous events
+  async (onClick(success, 100))
+  -- Would also be an error if we tried to register 2 diff listeners
+end

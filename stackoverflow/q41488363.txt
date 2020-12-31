@@ -1,0 +1,45 @@
+record Tokens begin
+  refresh_token: Int;
+  exists: Bool
+end
+
+record RefreshResults begin
+  err: Int;
+  newTokens: Tokens
+end
+
+func auth_with_api(): Promise(Tokens) begin
+  promise prom, setProm: Tokens in
+  let results = RefreshResults {
+    err=0, newTokens=Tokens { refresh_token=5, exists=true }
+  } in
+  async (
+    if results.err != 0 then
+      setProm <- results.newTokens
+    else
+      setProm <- results.newTokens
+    end
+  );
+  prom  
+end
+
+func refresh_tokens(tokens: Tokens): Promise(Tokens) begin
+  promise prom, setProm: Tokens in
+  let results = RefreshResults {
+    err=0, newTokens=Tokens { refresh_token=5, exists=true }
+  } in
+  async (
+    if results.err != 0 then
+      if results.err == 5 then
+        auth_with_api()
+      else
+        setProm <- tokens
+      end
+    else
+      if results.newTokens.exists then
+        setProm <- results.newTokens
+      else () end
+    end
+  );
+  prom
+end

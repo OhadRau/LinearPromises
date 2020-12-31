@@ -1,0 +1,26 @@
+record Response begin
+  headers: String;
+  statusCode: Int
+end
+
+func onResult(error: String, response: Response, body: String): String begin
+  println(concat("Status: ", intToString(response.statusCode)));
+  println(concat("Headers: ", response.headers));
+  println(concat("Response: ", body));
+  body
+end
+
+func request(path: String): String begin
+  "dummy"
+end
+
+func getFromApi(path: String): String begin
+  onResult("dummy", Response { statusCode=404, headers="dummy" }, request(path))
+end
+
+func main(): Unit begin
+  promise performancePerMonth, setPPM: Int in
+  async getFromApi("dummyPath");
+  let ppm = ?performancePerMonth in
+  println(concat("Then: ", intToString(ppm)))
+end

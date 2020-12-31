@@ -1,0 +1,14 @@
+func copyTpl(): Bool begin
+  true
+end
+
+func _initDockerConfig(): Promise(Unit) begin
+  println("");
+  println("Init Docker config.");
+  promise p, resolve: Unit in
+  -- Code was updated to include a resolve later according to edit history
+  if !copyTpl() then
+    resolve <- ()
+  else () end;
+  p
+end
