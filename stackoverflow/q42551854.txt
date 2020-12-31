@@ -1,3 +1,4 @@
+-- https://stackoverflow.com/questions/42551854/why-my-event-listener-wont-last-after-one-event-when-using-promise-in-es6
 func onClick(p: Promise*(Int), x: Int): Unit begin
   -- Again, since we don't have events or closures
   -- we can emulate it with a loop that sets the

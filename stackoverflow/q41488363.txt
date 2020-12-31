@@ -1,3 +1,4 @@
+-- https://stackoverflow.com/questions/41488363/return-a-promise-from-an-executor-function
 record Tokens begin
   refresh_token: Int;
   exists: Bool

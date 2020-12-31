@@ -1,3 +1,4 @@
+-- https://stackoverflow.com/questions/41268953/promise-all-then-never-resolves
 record Response begin
   headers: String;
   statusCode: Int

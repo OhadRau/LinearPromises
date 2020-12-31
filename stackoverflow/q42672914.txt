@@ -1,3 +1,4 @@
+-- https://stackoverflow.com/questions/42672914/why-my-promise-is-undefined
 func copyTpl(): Bool begin
   true
 end

@@ -1,3 +1,4 @@
+-- https://stackoverflow.com/questions/42304958/promise-not-resolved-after-a-validation-failure
 func http_post_login(user: String): String begin
   concat(user, "-dummy")
 end
@@ -10,9 +11,10 @@ end
 
 func LoginService(): Unit begin
   promise deferred, setDeferred: String in
-  let n = 1 in
-  for i = 1 to n begin
+  async while true begin
   -- Can't really imitate events or closures, but this shows what would happen if events were able to repeat
-    login(deferred, "user")
+    if false then
+      login(deferred, "user")
+    else () end
   end
 end

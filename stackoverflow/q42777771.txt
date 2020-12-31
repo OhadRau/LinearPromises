@@ -1,3 +1,4 @@
+-- https://stackoverflow.com/questions/42777771/resolve-a-promise-within-another-promise
 func doIt(): Promise(String) begin
   let numKeys = 1 in
   promise p, resolve: String in
