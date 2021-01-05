@@ -113,13 +113,21 @@ let split userTypes gamma left_exp right_exp =
     if must_be_used then not (Env.mem id gamma_right) else true
   end gamma_left in
   if all_used && none_reused then Some (gamma_left, gamma_right)
-  else failwith (
-    Printf.sprintf
-      "Unable to split env [%s] between %s and %s; env [%s] differed from [%s] (all=%b,none=%b)\n"
-      (Env.to_string string_of_ty gamma)
-      (string_of_expr left_exp) (string_of_expr right_exp)
-      (Env.to_string string_of_ty gamma_left) (Env.to_string string_of_ty gamma_right)
-      all_used none_reused)
+  else if all_used then
+    let reused = Env.filter (fun id _ -> Env.mem id gamma_right) gamma_left in
+    failwith (
+      Printf.sprintf
+        "Cannot reuse linear variables [%s] in both %s and %s"
+        (Env.to_string string_of_ty reused)
+        (string_of_expr left_exp) (string_of_expr right_exp))
+  else
+    let dropped =
+      Env.filter (fun id _ -> not (Env.mem id gamma_left || Env.mem id gamma_right)) gamma in
+    failwith (
+      Printf.sprintf
+        "Must use linear variables [%s] in either %s or %s"
+        (Env.to_string string_of_ty dropped)
+        (string_of_expr left_exp) (string_of_expr right_exp))
 
 let rec split_sequence userTypes gamma = function
   | [] -> []
