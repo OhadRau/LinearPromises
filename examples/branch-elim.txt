@@ -1,9 +1,0 @@
-func main(): Unit begin
-  let p: Promise*(Int) = promise Int in
-  if true then
-    p <- 5
-  else
-    ()
-  end;
-  p <- 0
-end

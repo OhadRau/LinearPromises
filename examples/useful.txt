@@ -1,84 +1,29 @@
-union IntList begin
-  Cons[Int, IntList];
-  Nil[]
-end
-
-record Pair begin
-  left: IntList;
-  right: IntList
-end
-
-func splitListAux(list: IntList, left: IntList, right: IntList): Pair begin
-  printInt(-77);
-  match list begin
-    Nil[] -> Pair { left = left, right = right }
-    Cons[x, xs] ->
-      printInt(x);
-      splitListAux(xs, right, Cons[x, left]) -- Swap so that we add next num to other list
+func waitN(n: Int): Unit begin
+  for i = 0 to n begin
+    ()
   end
 end
 
-func splitList(list: IntList): Pair begin
-  splitListAux(list, Nil[], Nil[])
+func task(): Int begin
+  waitN(1000000);
+  555
 end
 
-func countUptoAux(i: Int, max: Int): IntList begin
-  printInt(i);
-  if eqInt(i, max) then
-    Nil[]
-  else
-    Cons[i, countUptoAux(addInt(i, 1), max)]
-  end
+func future(): Promise(Int) begin
+  promise r, w: Int in
+  async w <- task();
+  r
 end
 
-func countUpto(max: Int): IntList begin
-  countUptoAux(0, max)
-end
-
-func twoOrLess(nums: IntList): Bool begin
-  match nums begin
-    Nil[] -> true
-    Cons[x, xs] ->
-      match xs begin
-        Nil[] -> true
-        Cons[y, ys] ->
-          match ys begin
-            Nil[] -> true
-            Cons[z, zs] -> false
-          end
-      end
-  end
-end
-
-func sumUp(nums: IntList): Int begin
-  printInt(-66);
-  match nums begin
-    Nil[] -> 0
-    Cons[x, xs] -> addInt(x, sumUp(xs))
-  end
-end
-
-func sum(result: Promise*(Int), nums: IntList): Unit begin
-  if twoOrLess(nums) then
-    printInt(-99);
-    result <- sumUp(nums)
-  else
-    printInt(-88);
-    let pair: Pair = splitList(nums) in
-    let leftResult: Promise*(Int) = promise Int in
-    let rightResult: Promise*(Int) = promise Int in
-    async sum(leftResult, pair.left);
-    async sum(rightResult, pair.right);
-    result <- addInt(?leftResult, ?rightResult)
-  end
+func doubleInt(n: Int): Int begin
+  let q: String = "hello" in
+  n + n
 end
 
 func main(): Unit begin
-  printInt(-1);
-  let myList: IntList = countUpto(10) in
-  printInt(-2);
-  let result: Promise*(Int) = promise Int in
-  async sum(result, myList);
-  printInt(-3);
-  printBool(eqInt(?result, 45)) -- 1 + 2 + ... + 9
+  let result: Promise(Int) = future() in
+  promise r, w: Int in
+  async println(intToString(?result));
+  async w <- doubleInt(?result);
+  async println(intToString(?r))
 end

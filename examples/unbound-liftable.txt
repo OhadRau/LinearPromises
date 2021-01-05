@@ -1,9 +1,0 @@
-union Liftable begin
-  Q[Promise*(Int)]
-end
-
-func main(): Unit begin
-  let p: Promise*(Int) = promise Int in
-  let u: Liftable = Q[p] in
-  ()
-end
