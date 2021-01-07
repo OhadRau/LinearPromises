@@ -4,5 +4,5 @@
   (modules parser))
 
 (executable
-  (name relprom)
+  (name compiler)
   (libraries batteries menhirLib))

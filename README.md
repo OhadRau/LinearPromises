@@ -8,8 +8,8 @@ not reflect the current state of the type system until things are a little more 
 
 ## How to use
 
-Build with `dune build src/relprom.exe` in the root directory. You can compile programs with
-`dune exec src/relprom.exe <filename>`, which will output the generated code on the command line. If you want to
+Build with `dune build src/compiler.exe` in the root directory. You can compile programs with
+`dune exec src/compiler.exe <filename>`, which will output the generated code on the command line. If you want to
 use that code, redirect stdout to a file and remove the first few lines to get a valid Java program. Make sure the
 class name matches the file name. Place this file in the `runtime/src/` directory and compile with
 `javac -d build <classname>.java lang/promises/*.java`. Now `cd build/` and run `java <classname>`.
