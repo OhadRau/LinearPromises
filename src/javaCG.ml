@@ -256,7 +256,7 @@ let emit_case_classes baseClass cases =
 let emit_type { typeName; typeDefn } = match typeDefn with
   | Record fields ->
     Printf.sprintf {|
-  public static class %s extends ThreadLockedObject {
+  public static class %s {
     // public members
 %s
 
@@ -272,7 +272,7 @@ let emit_type { typeName; typeDefn } = match typeDefn with
   | Union cases ->
     Printf.sprintf {|
   // union base class
-  public static abstract class %s extends ThreadLockedObject {
+  public static abstract class %s {
     public abstract <_R> _R match(%s);
   }
   // union case classes
