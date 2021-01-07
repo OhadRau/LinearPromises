@@ -6,8 +6,6 @@ end
 func writeToAll(l: List, v: Int): Unit begin
   match l begin
     Nil[] -> ()
-    -- Bug: we can't reuse the name l for the same variable here with linear typing enabled
-    -- this shouldn't be hard to fix with something like SSA but I'm lazy
     Cons[p, l] ->
       p <- v;
       writeToAll(l, v + 1)
@@ -26,7 +24,7 @@ end
 func main(): Unit begin
   promise r, w: Int in
   w <- 5;
-  if ?r == 5 then -- Error if we reuse p here, since p has been 'moved'
+  if ?r == 5 then
     writeToAll(buildList(10), 0)
   else
     writeToAll(buildList(5), 0)
