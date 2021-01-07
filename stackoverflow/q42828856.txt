@@ -1,0 +1,40 @@
+func fetchData(): Promise(String) begin
+  promise r, setR: String in
+  async setR <- "hi";
+  r
+end
+
+func ignore(x: String): Unit begin
+  ()
+end
+
+func doSomething(x: String): Unit begin
+  println(x)
+end
+
+func main(): Unit begin
+  let foo = fetchData() in
+  async (
+    let result = ?foo in
+    promise then1, setThen1: String in
+    async (
+      sleep(0);
+      ignore(concat(result, "bar")) -- Supposed to setThen1 <- ...
+    );
+    async (
+      let result = ?then1 in
+      promise then2, setThen2: String in
+      async (
+        sleep(0);
+        ignore(concat(result, "woo")) -- Supposed to setThen2 <- ...
+      );
+      async (
+        let result = ?then2 in
+        async (
+          sleep(0);
+          doSomething(result)
+        )
+      )
+    )
+  )
+end

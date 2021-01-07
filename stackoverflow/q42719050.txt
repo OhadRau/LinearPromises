@@ -1,0 +1,32 @@
+union OkOrErr begin
+  Ok[String];
+  Err[String]
+end
+
+func saveUser(user: String): Promise(OkOrErr) begin
+  promise r1, setR1: OkOrErr in
+  let err = "Failed" in
+  if length(err) > 0 then
+    setR1 <- Err[err]
+  else
+    setR1 <- Ok[user]
+  end;
+  promise r2, setR2: OkOrErr in
+  async match ?r1 begin -- First .then()
+    Ok[user] -> setR2 <- Ok[user]
+    Err[e] -> setR2 <- Err[e] -- Roughly equivalent to not catching yet
+  end;
+  promise r3, setR3: OkOrErr in
+  async match ?r2 begin -- Second .then()
+    Ok[user] ->
+      if length(err) > 0 then
+        setR3 <- Err[err]
+      else
+        () -- If no err we don't do anything here
+      end
+    Err[e] ->
+      println(e);
+      setR3 <- e
+  end;
+  r3
+end

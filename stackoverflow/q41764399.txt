@@ -1,0 +1,29 @@
+union OkOrErr begin
+  Ok[Int];
+  Err[String]
+end
+
+func setExistingCredentials(clientId: Int): Promise(OkOrErr) begin
+  promise res, setRes: OkOrErr in
+  setRes <- Ok[0];
+  res
+end
+
+func saveTopValuePages(pageSize: Int, clientId: Int): Promise(OkOrErr) begin
+  promise r1, setR1: OkOrErr in
+  promise r2, setR2: OkOrErr in
+  promise r3, setR3: OkOrErr in
+  async match ?setExistingCredentials(clientId) begin
+    Ok[_] -> setR1 <- Ok[clientId+1]
+    Err[_] -> setR1 <- Err["test123"]
+  end;
+  async match ?r1 begin
+    Ok[viewId] -> setR2 <- Ok[viewId+1]
+    Err[_] -> setR2 <- Err["abcasdasd"]
+  end;
+  async match ?r2 begin
+    Ok[response] -> setR3 <- Ok[response]
+    Err[e] -> setR3 <- Err[e]
+  end;
+  r3
+end

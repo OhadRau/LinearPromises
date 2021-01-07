@@ -1,0 +1,38 @@
+union OkOrErr begin
+  Ok[String];
+  Err[]
+end
+
+func updateUser(): Promise(OkOrErr) begin
+  promise x, setX: OkOrErr in
+  async (setX <- Ok["dummy"]);
+  x
+end
+
+func then1(user: Promise(OkOrErr)): Promise(OkOrErr) begin
+  promise result, setResult: OkOrErr in
+  async match ?user begin
+    Ok[user] ->
+      println("Updated user");
+      setResult <- Ok[user]
+    Err[] ->
+      println("An error has occured");
+      setResult <- Err[]
+  end;
+  result
+end
+
+func then2(user: Promise(OkOrErr)): Promise(Unit) begin
+  promise result, setResult: Unit in
+  async match ?user begin
+    Ok[user] ->
+      setResult <- ()
+    Err[] ->
+      setResult <- ()
+  end;
+  result
+end
+
+func main(): Unit begin
+  ?then2(then1(updateUser()))
+end

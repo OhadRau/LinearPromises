@@ -1,0 +1,25 @@
+union OkOrErr begin
+  Ok[String];
+  Err[String]
+end
+
+func firebaseAuth(): OkOrErr begin
+  promise r, setR: OkOrErr in
+  async setR <- Ok["hi"];
+  ?r
+end
+
+func componentDidMount(): Unit begin
+  promise p, setP: OkOrErr in -- Implicitly created by first .then()
+  async (
+    let auth = ?firebaseAuth() in
+    match auth begin
+      Ok[ok] -> println("lol")
+      Err[_] -> () -- Catch does nothing
+    end;
+    async match ?p begin
+      Ok[ok] -> println(ok)
+      Err[_] -> ()
+    end
+  )
+end

@@ -1,0 +1,18 @@
+func delay(msec: Int, value: Int): Promise(Int) begin
+  promise result, setResult: Int in
+  sleep(msec);
+  setResult <- msec;
+  result
+end
+
+func main(): Unit begin
+  promise loopPromise, setLoopPromise: Unit in
+  setLoopPromise <- ();
+  for i = 1 to 3 begin
+    async (
+      ?loopPromise;
+      println(intToString(i));
+      let _ = delay(1000, 5) in ()
+    )
+  end
+end

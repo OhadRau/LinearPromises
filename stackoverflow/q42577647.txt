@@ -1,0 +1,54 @@
+union OkOrErr begin
+  Ok[String];
+  Err[String]
+end
+
+func asyncMock(url: String): Promise(OkOrErr) begin
+  promise r, setR: OkOrErr in
+  async (
+    sleep(10000);
+    setR <- Ok["banana"]
+  );
+  r
+end
+
+record ThrottleClosure begin
+  p: Promise(Unit);
+  throttleMs: Int
+end
+
+
+
+func throttleAsync(closure: ThrottleClosure, url: String): Promise(OkOrErr) begin
+  ?closure.p;
+  let r = (
+    sleep(closure.throttleMs);
+    promise r, setR: OkOrErr in
+    setR <- ?asyncMock(url)
+  ) in
+  ()
+end
+
+func throttleFactory(throttleMs: Int): ThrottleClosure begin
+  promise u, setU: Unit in
+  setU <- ();
+  ThrottleClosure { p=u, throttleMs=throttleMs }
+end
+
+func main(): Unit begin
+  let throttleFuns = throttleFactor(2000) in
+  println("running");
+
+  match throttleAsync(throttleFuns, "http://www.bananas.pt") begin
+    Ok[e] -> println(e)
+    Err[e] -> println(e)
+  end;
+  match throttleAsync(throttleFuns, "http://www.fruits.es") begin
+    Ok[e] -> println(e)
+    Err[e] -> println(e)
+  end;
+  match throttleAsync(throttleFuns, "http://www.veggies.com") begin
+    Ok[e] -> println(e)
+    Err[e] -> println(e)
+  end
+end

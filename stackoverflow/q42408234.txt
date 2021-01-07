@@ -1,0 +1,44 @@
+record LoginInfo begin
+  isValid: Bool;
+  errors: String
+end
+
+union OkOrErr begin
+  Ok[LoginInfo];
+  Err[String]
+end
+
+func login(req: String): Unit begin
+  async match ?validateLogin(req) begin
+    Ok[info] ->
+      match info begin
+        {isValid=isValid, errors=errors} ->
+          if isValid then
+            println("success!")
+          else
+            println(errors)
+          end
+      end
+    Err[err] -> println(err)
+  end
+end
+
+func bcryptCompare(pw: String, expected: String): Promise(Bool) begin
+  promise result, setResult: Bool in
+  setResult <- true;
+  result
+end
+
+func validateLogin(data: String): Promise(OkOrErr) begin
+  promise result, setResult: OkOrErr in
+  let err = "Invalid password" in
+  async if ?bcryptCompare() then
+    setResult <- Ok[LoginInfo {
+      isValid=length(err)>0,
+      errors=err
+    }]
+  else
+    println(err)
+  end;
+  result
+end

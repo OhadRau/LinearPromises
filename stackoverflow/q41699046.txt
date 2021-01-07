@@ -1,0 +1,48 @@
+union FulfillOrReject begin
+  Fulfill[Int];
+  Reject[Int]
+end
+
+func dieToss(): Int begin
+  6
+end
+
+func tossASix(): Promise(FulfillOrReject) begin
+  promise result, setResult: FulfillOrReject in
+  let n = dieToss() in
+  if n == 6 then
+    setResult <- Fulfill[n]
+  else
+    setResult <- Reject[n]
+  end;
+  result
+end
+
+func logAndTossAgain(toss: Int): Promise(FulfillOrReject) begin
+  println(concat("Tossed a ", concat(intToString(toss), ", need to try again.")));
+  tossASix()
+end
+
+func logSuccess(toss: Int): Unit begin
+  println(concat("Yay, managed to toss a ", intToString(toss)))
+end
+
+func logFailure(toss: Int): Unit begin
+  println(concat("Tossed a ", concat(intToString(toss), ". Too bad, couldn't roll a six")))
+end
+
+func main(): Unit begin
+  let try1 = tossASix() in
+  let try2 = match ?try1 begin
+    Fulfill[n] -> logSuccess(n)
+    Reject[n] -> logAndTossAgain(n)
+  end in
+  let try3 = match ?try2 begin
+    Fulfill[n] -> logSuccess(n)
+    Reject[n] -> logAndTossAgain(n)
+  end in
+  match ?try3 begin
+    Fulfill[n] -> logSuccess(n)
+    Reject[n] -> logFailure(n)
+  end
+end
