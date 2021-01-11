@@ -64,12 +64,14 @@ let eval_program ~output_file ~verbose ~benchmark_typechecker ~benchmark_pipelin
       print_endline (func.funcName ^ ": " ^ string_of_ty ty);
       print_endline "---------------"
     end in
-  let compile program =
+  let compile ?(write=true) program =
     List.iter (typecheck program.types) program.funcs;
     let javaProgram = JavaCG.emit_program program in
-    let oc = open_out output_file in
-    output_string oc javaProgram;
-    close_out oc in
+    if write then begin
+      let oc = open_out output_file in
+      output_string oc javaProgram;
+      close_out oc
+    end in
   if !benchmark_typechecker then begin
     let start_time = Sys.time () in
     for _ = 0 to 1000 do
@@ -81,7 +83,7 @@ let eval_program ~output_file ~verbose ~benchmark_typechecker ~benchmark_pipelin
   end else if !benchmark_pipeline then begin
     let start_time = Sys.time () in
     for _ = 0 to 1000 do
-      compile program
+      compile ~write:false program
     done;
     let end_time = Sys.time () in
     Printf.printf "Completed benchmark for program '%s' in: %f\n"
