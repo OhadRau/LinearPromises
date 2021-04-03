@@ -5,4 +5,5 @@
 
 (executable
   (name compiler)
-  (libraries batteries menhirLib))
+  (public_name linear-promises.compiler)
+  (libraries menhirLib))
