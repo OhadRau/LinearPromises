@@ -2,6 +2,7 @@ package lang.promises;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class PromiseRuntime {
     private static final int MAX_THREADS = 10;
@@ -22,8 +23,20 @@ public class PromiseRuntime {
         pool.execute(r);
         return Unit.the;
     }
+
     public Unit async(AsyncTask t) {
         t.run(pool);
+        return Unit.the;
+    }
+
+    public Unit shutdown() {
+        pool.shutdown();
+        try {
+            // Long.MAX_VALUE is treated as forever in awaitTermination
+            pool.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+        } catch (InterruptedException e) {
+            return Unit.the;
+        }
         return Unit.the;
     }
 
