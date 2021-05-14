@@ -218,12 +218,22 @@ func listMax(list: IntList): Int begin
 end
 
 func main(): Unit begin
+  println("Printing contents of Long.java:");
   printLines("Long.java");
+  println("");
+
+  println("Printing min(3^2, 2^3) ... max(3^2, 2^3):");
   for i = min(square(3), cube(2)) to max(square(3), cube(2)) begin
     println(concat("On iteration: ", intToString(i)))
   end;
+  println("");
+
+  println("Printing sum(max(n^2, n^3)) for n in file numbers.txt:");
   let sum = sumLinesSquaredOrCubed("numbers.txt") in
   println(intToString(min(0, sum)));
+  println("");
+
+  println("Finding maximum number in file numbers.txt:");
   let intList = buildList("numbers.txt") in
   let maxNumber = listMax(intList) in
   let announcement = concat("Maximum number was ", intToString(maxNumber)) in

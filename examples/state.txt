@@ -8,5 +8,6 @@ func count_and_sum(max: Int): Int begin
 end
 
 func main(): Unit begin
+  println("Summing all values from 0 to 10 (async)");
   println(intToString(count_and_sum(10)))
 end

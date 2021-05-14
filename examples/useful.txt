@@ -21,9 +21,10 @@ func doubleInt(n: Int): Int begin
 end
 
 func main(): Unit begin
+  println("Racing to print the result of future() & 2x the result of future():");
   let result: Promise(Int) = future() in
   promise r, w: Int in
-  async println(intToString(?result));
+  async println(concat("Future evaluated to: ", intToString(?result)));
   async w <- doubleInt(?result);
-  async println(intToString(?r))
+  async println(concat("2x future evaluated to: ", intToString(?r)))
 end

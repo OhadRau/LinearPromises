@@ -20,6 +20,7 @@ end
 
 func main(): Unit begin
   promise r, w: Int in
+  println("Squaring 10 (async)");
   async squareAndWrite(w, 10);
   println("Waiting for squared value...");
   println(intToString(?r))
