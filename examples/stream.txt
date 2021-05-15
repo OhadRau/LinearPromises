@@ -1,0 +1,46 @@
+record StreamElement begin
+  next: Promise(StreamElementOption);
+  requestNext: Promise*(Bool);
+  value: Int
+end
+
+union StreamElementOption begin
+  Next[StreamElement];
+  End[]
+end
+
+func streamCounter(state : Int): StreamElement begin
+  println("Stream!");
+  promise getNext, setNext : StreamElementOption in
+  promise nextRequested, requestNext : Bool in
+  async (
+    if ?nextRequested then
+      setNext <- Next[streamCounter(state + 1)]
+    else
+      setNext <- End[]
+    end
+  );
+  StreamElement { next = getNext, requestNext = requestNext, value = state }
+end
+
+func consume(stream: StreamElement, max: Int): Unit begin
+  println("Consume!");
+  match stream begin
+    { next = next, requestNext = requestNext, value = value } ->
+      println(intToString(value));
+      if value >= max then
+        requestNext <- false
+      else
+        println("More!");
+        requestNext <- true
+      end;
+      match ?next begin
+        Next[cont] -> consume(cont, max)
+        End[] -> ()
+      end
+  end
+end
+
+func main(): Unit begin
+  consume(streamCounter(1), 3)
+end

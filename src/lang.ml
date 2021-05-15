@@ -3,8 +3,8 @@ type primitive_ty =
 
 type ty = [
   | primitive_ty
-  | `Promise of primitive_ty
-  | `PromiseStar of primitive_ty
+  | `Promise of ty
+  | `PromiseStar of ty
   | `Function of ty list * ty
   | `Infer of ty option ref ]
 
@@ -14,8 +14,8 @@ let rec string_of_ty = function
   | `String -> "String"
   | `Unit -> "Unit"
   | `Custom name -> name
-  | `Promise ty -> "Promise(" ^ string_of_ty (ty :> ty) ^ ")"
-  | `PromiseStar ty -> "Promise*(" ^ string_of_ty (ty :> ty) ^ ")"
+  | `Promise ty -> "Promise(" ^ string_of_ty ty ^ ")"
+  | `PromiseStar ty -> "Promise*(" ^ string_of_ty ty ^ ")"
   | `Function (args, result) ->
      "(" ^ String.concat ", " (List.map string_of_ty args) ^ ") -> " ^ string_of_ty result
   | `Infer { contents = Some ty } -> string_of_ty ty
@@ -118,7 +118,7 @@ and expr =
   | ConstructUnion of { unionCtor: string; unionArgs: expr list }
   | ConstructRecord of { recordCtor: string; recordArgs: (string * expr) list }
   | RecordAccess of { record: expr; field: string }
-  | Promise of { read: string; write: string; ty: primitive_ty; promiseBody: expr }
+  | Promise of { read: string; write: string; ty: ty; promiseBody: expr }
   | Write of { promiseStar: expr; newValue: expr; unsafe: bool }
   | Read of { promise: expr }
   | Async of { application: expr }
