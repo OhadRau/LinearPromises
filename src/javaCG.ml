@@ -39,7 +39,8 @@ let rec emit_args userTypes = function
 
 and emit userTypes ?(in_expr=false) ?(is_final=false) = function 
   | Let { id = "_"; value = (For _) as loop; body; _ }
-  | Let { id = "_"; value = (While _) as loop; body; _ } ->
+  | Let { id = "_"; value = (While _) as loop; body; _ }
+  | Let { id = "_"; value = (If _) as loop; body; _ } ->
     Printf.sprintf "%s %s"
       (emit userTypes ~in_expr loop) (emit userTypes ~is_final body)
   | Let { id; annot; value; body } ->
