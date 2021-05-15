@@ -169,8 +169,8 @@ and emit userTypes ?(in_expr=false) ?(is_final=false) = function
     Printf.sprintf "%s.get()"
       (emit userTypes ~in_expr:true promise)
   | Async { application } ->
-    Printf.sprintf "$_rt.async(new AsyncTask(() -> %s))"
-      (emit userTypes ~in_expr:true application)
+    Printf.sprintf "$_rt.async(new AsyncTask(() -> { %s }))"
+      (emit userTypes ~in_expr:false ~is_final:true application)
 
 let rec emit_params = function
   | [] -> ""
