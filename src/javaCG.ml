@@ -32,51 +32,13 @@ let rec java_type = function
 
 let rec emit_args userTypes = function
   | [] -> ""
-  | [arg] -> emit userTypes ~in_expr:true arg
+  | [arg] -> to_expr userTypes arg
   | arg::args ->
     Printf.sprintf "%s, %s"
-      (emit userTypes ~in_expr:true arg) (emit_args userTypes args)
+      (to_expr userTypes arg) (emit_args userTypes args)
 
-and emit userTypes ?(in_expr=false) ?(is_final=false) = function 
-  | Let { id = "_"; value = (For _) as loop; body; _ }
-  | Let { id = "_"; value = (While _) as loop; body; _ }
-  | Let { id = "_"; value = (If _) as loop; body; _ } ->
-    Printf.sprintf "%s %s"
-      (emit userTypes ~in_expr loop) (emit userTypes ~is_final body)
-  | Let { id; annot; value; body } ->
-    let ty = java_type annot in
-    Printf.sprintf "%s %s = %s; %s"
-      ty (make_id id) (* = *) (emit userTypes ~in_expr:true value) (* ; *) (emit userTypes ~is_final body)
-  | Promise { read; write; ty; promiseBody } ->
-    let ty' = java_type (ty :> ty) in
-    Printf.sprintf "Promise<%s> %s = new Promise<%s>(); Promise<%s> %s = %s; %s"
-      ty' read ty' ty' write read (emit userTypes ~is_final promiseBody)
-  | If { condition; then_branch; else_branch } when in_expr ->
-    Printf.sprintf "((%s) ? (%s) : (%s))"
-      (emit userTypes ~in_expr condition)
-      (emit userTypes ~in_expr then_branch) (emit userTypes ~in_expr else_branch)
-  | If { condition; then_branch; else_branch } ->
-    Printf.sprintf "if (%s) { %s } else { %s }"
-      (emit userTypes ~in_expr:true condition)
-      (emit userTypes ~is_final then_branch) (emit userTypes ~is_final else_branch)
-  | For _ | While _ when in_expr ->
-    failwith "Cannot use for/while loop inside of an expression"
-  | For { name; first; last; forBody } ->
-    (* TODO: What if last < first? What if type(first) != int? *)
-    Printf.sprintf "for (int %s = %s; %s < %s; %s++) { %s }%s"
-      name (* = *) (emit userTypes ~in_expr:true first) (* ; *)
-      name (* < *) (emit userTypes ~in_expr:true last)  (* ; *)
-      name (* ++ *)
-      (emit userTypes forBody)
-      (if is_final then "; return Unit.the;" else "")
-  | While { whileCond; whileBody } ->
-    Printf.sprintf "while (%s) { %s }%s"
-    (emit userTypes ~in_expr:true whileCond) (emit userTypes whileBody)
-    (if is_final then "; return Unit.the;" else "")
-  | e when not in_expr && is_final ->
-    Printf.sprintf "return %s;" (emit userTypes ~in_expr:true e)
-  | e when not in_expr && not is_final ->
-    Printf.sprintf "Unit.ignore(%s);" (emit userTypes ~in_expr:true e)
+and to_expr userTypes = function
+  (* normal exprs are always emitted as exprs! *)
   | Variable v -> v
   | Unit -> "Unit.the"
   | Number n -> string_of_int n
@@ -84,21 +46,21 @@ and emit userTypes ?(in_expr=false) ?(is_final=false) = function
   | String s -> "\"" ^ String.escaped s ^ "\""
   | Infix { mode=#compare as mode; left; right } ->
     Printf.sprintf "Boolean.valueOf((%s).compareTo(%s) %s 0)"
-      (emit userTypes ~in_expr:true left)
-      (emit userTypes ~in_expr:true right) (string_of_compare mode)
+      (to_expr userTypes left)
+      (to_expr userTypes right) (string_of_compare mode)
   | Infix { mode=#arithmetic as mode; left; right } ->
     Printf.sprintf "Integer.valueOf((%s) %s (%s))"
-      (emit userTypes ~in_expr:true left) (string_of_arithmetic mode)
-      (emit userTypes ~in_expr:true right)
+      (to_expr userTypes left) (string_of_arithmetic mode)
+      (to_expr userTypes right)
   | Infix { mode=#logical as mode; left; right } ->
     Printf.sprintf "Boolean.valueOf((%s) %s (%s))"
-      (emit userTypes ~in_expr:true left) (string_of_logical mode)
-      (emit userTypes ~in_expr:true right)
+      (to_expr userTypes left) (string_of_logical mode)
+      (to_expr userTypes right)
   | Not e ->
-    Printf.sprintf "!(%s)" (emit userTypes ~in_expr:true e)
+    Printf.sprintf "!(%s)" (to_expr userTypes e)
   | Apply { fn; args } ->
     Printf.sprintf "%s(%s)"
-      (emit userTypes ~in_expr:true fn) (emit_args userTypes args)
+      (to_expr userTypes fn) (emit_args userTypes args)
   | ConstructUnion { unionCtor; unionArgs } ->
     Printf.sprintf "new %s(%s)"
       unionCtor (emit_args userTypes unionArgs)
@@ -116,7 +78,7 @@ and emit userTypes ?(in_expr=false) ?(is_final=false) = function
     end
   | RecordAccess { record; field } ->
     Printf.sprintf "(%s).%s"
-      (emit userTypes ~in_expr:true record) field
+      (to_expr userTypes record) field
   | Match { matchValue; matchCases } -> begin
     let firstCtor = match matchCases with
       | {patCtor; _}::_ -> patCtor
@@ -135,10 +97,10 @@ and emit userTypes ?(in_expr=false) ?(is_final=false) = function
     end expectedCases in
     let branches = List.map begin fun (args, result) ->
       Printf.sprintf "(%s) -> {%s}"
-        (String.concat ", " args) (emit userTypes ~in_expr:false ~is_final:true result)
+        (String.concat ", " args) (emit userTypes ~is_final:true result)
     end ordered |> String.concat ", " in
-    Printf.sprintf "(%s).match(%s)%s"
-      (emit userTypes ~in_expr:true matchValue) branches (if in_expr then "" else ";")
+    Printf.sprintf "(%s).match(%s)"
+      (to_expr userTypes matchValue) branches
   end
   | RecordMatch { matchRecord; matchArgs; matchBody } -> begin
     let firstField = match matchArgs with
@@ -158,19 +120,56 @@ and emit userTypes ?(in_expr=false) ?(is_final=false) = function
     let branches =
       Printf.sprintf "(%s) -> {%s}"
         (String.concat ", " (List.map (fun (_, v) -> v) ordered))
-        (emit userTypes ~in_expr:false ~is_final:true matchBody) in
-    Printf.sprintf "(%s).match(%s)%s"
-      (emit userTypes ~in_expr:true matchRecord) branches (if in_expr then "" else ";")
+        (emit userTypes ~is_final:true matchBody) in
+    Printf.sprintf "(%s).match(%s)"
+      (to_expr userTypes matchRecord) branches
   end
   | Write { promiseStar; newValue; _ } ->
     Printf.sprintf "%s.fulfill(%s)"
-      (emit userTypes ~in_expr:true promiseStar) (emit userTypes ~in_expr:true newValue)
+      (to_expr userTypes promiseStar) (to_expr userTypes newValue)
   | Read { promise } ->
     Printf.sprintf "%s.get()"
-      (emit userTypes ~in_expr:true promise)
+      (to_expr userTypes promise)
   | Async { application } ->
     Printf.sprintf "$_rt.async(new AsyncTask(() -> { %s }))"
-      (emit userTypes ~in_expr:false ~is_final:true application)
+      (emit userTypes ~is_final:true application)
+
+  (* all other statements are converted into exprs by wrapping in a lambda! *)
+  | expr -> Printf.sprintf "Function0.call(() -> { %s })" (emit userTypes ~is_final:true expr)
+
+and emit userTypes ?(is_final=false) = function
+  | Let { id; annot; value; body } ->
+    let ty = java_type annot in
+    Printf.sprintf "%s %s = %s; %s"
+      ty (make_id id) (to_expr userTypes value) (emit userTypes ~is_final body)
+  | Promise { read; write; ty; promiseBody } ->
+    let ty' = java_type (ty :> ty) in
+    Printf.sprintf "Promise<%s> %s = new Promise<%s>(); Promise<%s> %s = %s; %s"
+      ty' read ty' ty' write read (emit userTypes ~is_final promiseBody)
+  | If { condition; then_branch; else_branch } ->
+    Printf.sprintf "if (%s) { %s } else { %s }"
+      (to_expr userTypes condition)
+      (emit userTypes ~is_final then_branch) (emit userTypes ~is_final else_branch)
+  | For { name; first; last; forBody } ->
+    (* TODO: What if last < first? What if type(first) != int? *)
+    let tmp_name = make_id "_" in
+    Printf.sprintf "for (int %s = %s; %s < %s; %s++) { final int %s = %s; %s }%s"
+      tmp_name (* = *) (to_expr userTypes first) (* ; *)
+      tmp_name (* < *) (to_expr userTypes last)  (* ; *)
+      tmp_name (* ++ *)
+      (* final int *) name (* = *) tmp_name (* ; *)
+      (emit userTypes forBody)
+      (if is_final then "return Unit.the;" else "")
+  | While { whileCond; whileBody } ->
+    Printf.sprintf "while (%s) { %s }%s"
+    (to_expr userTypes whileCond) (emit userTypes whileBody)
+    (if is_final then "return Unit.the;" else "")
+
+  (* convert expressions to statements *)
+  | e when is_final ->
+    Printf.sprintf "return %s;" (to_expr userTypes e)
+  | e (* when not is_final *) ->
+    Printf.sprintf "Unit.ignore(%s);" (to_expr userTypes e)
 
 let rec emit_params = function
   | [] -> ""
