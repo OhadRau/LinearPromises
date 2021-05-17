@@ -9,7 +9,6 @@ WORKDIR /usr/src/app
 #COPY stackoverflow/ stackoverflow/
 #COPY runtime/ runtime/
 RUN git clone https://github.com/OhadRau/LinearPromises .
-COPY ARTIFACT.md README.md
 
 RUN eval $(opam config env) && dune build
 RUN opam install ./linear-promises.opam
