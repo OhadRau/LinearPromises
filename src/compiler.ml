@@ -78,7 +78,7 @@ let eval_program ~output_file ~verbose ~benchmark_typechecker ~benchmark_pipelin
       List.iter (typecheck program.types) program.funcs;
     done;
     let end_time = Sys.time () in
-    Printf.printf "Completed type checking benchmark for program '%s' in: %f\n"
+    Printf.printf "Completed type checking benchmark for program '%s' in: %f seconds (1000 runs)\n"
       program.programName (end_time -. start_time)
   end else if !benchmark_pipeline then begin
     let start_time = Sys.time () in
@@ -86,7 +86,7 @@ let eval_program ~output_file ~verbose ~benchmark_typechecker ~benchmark_pipelin
       compile ~write:false program
     done;
     let end_time = Sys.time () in
-    Printf.printf "Completed benchmark for program '%s' in: %f\n"
+    Printf.printf "Completed full compiler benchmark for program '%s' in: %f seconds (1000 runs)\n"
       program.programName (end_time -. start_time)
   end else compile program
 
@@ -96,12 +96,12 @@ let () =
   and verbose = ref false
   and output_file = ref "" in
   let spec = [
-    "--tybench", Arg.Set benchmark_typechecker, "Benchmark the typechecker";
-    "--bench", Arg.Set benchmark_pipeline, "Benchmark the entire pipeline";
+    "--tybench", Arg.Set benchmark_typechecker, "Benchmark the typechecker (reports seconds per 1000 runs)";
+    "--bench", Arg.Set benchmark_pipeline, "Benchmark the entire pipeline (reports seconds per 1000 runs)";
     "-v", Arg.Set verbose, "Print out extra debug information";
     "--verbose", Arg.Set verbose, "Print out extra debug information";
-    "-o", Arg.Set_string output_file, "Set output file name"
+    "-o", Arg.Set_string output_file, "Set output file name (default to ./<Filename>.java if not provided)"
   ] in
   Arg.parse spec (fun filename ->
     read_file (eval_program ~benchmark_typechecker ~benchmark_pipeline ~verbose ~output_file) filename)
-    "compiler [-o output_file] [-tybench] [-v|-verbose] <input_file>"
+    "compiler [-o output_file] [--tybench|--bench] [-v|--verbose] <input_file>"
