@@ -32,3 +32,7 @@ runtime/out
 
 # generated java programs
 /*.java
+runtime/src/*.java
+# compiled java code
+runtime/src/*.class
+runtime/src/lang/promises/*.class
