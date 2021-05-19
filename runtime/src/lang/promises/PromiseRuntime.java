@@ -46,6 +46,7 @@ public class PromiseRuntime {
         rt.async(new AsyncTask(() -> {
             System.out.println("Thread id: " + AsyncTask.currentTask().id());
             System.out.println(pInt.get() * 2);
+            return Unit.the;
         }));
         rt.async(() -> {
             try {
