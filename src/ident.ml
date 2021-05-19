@@ -6,10 +6,10 @@ let uniq =
   fun str ->
     let num = !counter in
     counter := num + 1;
-    Printf.sprintf "%s%%%d" str num
+    Printf.sprintf "%s$%d" str num
 
 let original_name id =
-  String.split_on_char '%' id |> List.hd
+  String.split_on_char '$' id |> List.hd
 
 let rec make_unique env = function
   | Variable var when Env.mem var env -> Variable (Env.find var env)

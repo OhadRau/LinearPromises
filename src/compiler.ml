@@ -59,13 +59,15 @@ let eval_program ~output_file ~verbose ~benchmark_typechecker ~benchmark_pipelin
       print_endline (string_of_expr func.expr);
       print_endline "---------------";
     end;
-    let ty = typecheck_fn types gamma (Ident.preprocess_idents gamma func) in
+    let preprocessed_func = Ident.preprocess_idents gamma func in
+    let ty = typecheck_fn types gamma preprocessed_func in
     if !verbose then begin
       print_endline (func.funcName ^ ": " ^ string_of_ty ty);
       print_endline "---------------"
-    end in
+    end;
+    preprocessed_func in
   let compile ?(write=true) program =
-    List.iter (typecheck program.types) program.funcs;
+    let program = { program with funcs = List.map (typecheck program.types) program.funcs } in
     let javaProgram = JavaCG.emit_program program in
     if write then begin
       let oc = open_out output_file in
@@ -75,7 +77,7 @@ let eval_program ~output_file ~verbose ~benchmark_typechecker ~benchmark_pipelin
   if !benchmark_typechecker then begin
     let start_time = Sys.time () in
     for _ = 0 to 1000 do
-      List.iter (typecheck program.types) program.funcs;
+      List.iter (fun func -> typecheck program.types func |> ignore) program.funcs;
     done;
     let end_time = Sys.time () in
     Printf.printf "Completed type checking benchmark for program '%s' in: %f seconds (1000 runs)\n"

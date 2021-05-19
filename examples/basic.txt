@@ -6,9 +6,9 @@ end
 func writeToAll(l: List, v: Int): Unit begin
   match l begin
     Nil[] -> ()
-    Cons[p, ll] ->
+    Cons[p, l] ->
       p <- v;
-      writeToAll(ll, v + 1)
+      writeToAll(l, v + 1)
   end
 end
 
