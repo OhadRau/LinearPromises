@@ -42,5 +42,5 @@ func main(): Unit begin
   println("Reading file hello.txt:");
   let text: Promise(String) = readFileAsync("hello.txt") in
   async println(concat("Num lines: ", intToString(countLines(?text))));
-  async println(concat("Num words: ", intToString(countOccurences("blah", ?text))))
+  async println(concat("Num occurences of 'blah': ", intToString(countOccurences("blah", ?text))))
 end

@@ -222,9 +222,9 @@ func main(): Unit begin
   printLines("Long.java");
   println("");
 
-  println("Printing min(3^2, 2^3) ... max(3^2, 2^3):");
-  for i = min(square(3), cube(2)) to max(square(3), cube(2)) begin
-    println(concat("On iteration: ", intToString(i)))
+  println("Printing min(3^2, 3^3) ... max(3^2, 3^3):");
+  for i = min(square(3), cube(3)) to max(square(3), cube(3)) begin
+    println(concat(" i=", intToString(i)))
   end;
   println("");
 
