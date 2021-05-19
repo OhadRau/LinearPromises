@@ -44,7 +44,7 @@ module List = struct
     | [] -> true
     | [_] -> true
     | item1::item2::rest -> item1 = item2 && all_equal (item2::rest)
-  let sort_by_first a = sort (fun (x1, _) (x2, _) -> compare x1 x2) a
+  let sort_by_first a = sort (fun (x1, _) (x2, _) -> Stdlib.compare x1 x2) a
 end
 
 let rec free env = function
