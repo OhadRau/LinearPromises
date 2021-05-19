@@ -1,6 +1,4 @@
-FROM ocaml/opam:alpine-ocaml-4.11
-RUN opam install dune menhir
-
+FROM ocaml/opam:alpine-ocaml-4.12
 WORKDIR /usr/src/app
 #COPY dune dune
 #COPY dune-project dune-project
@@ -10,6 +8,9 @@ WORKDIR /usr/src/app
 #COPY runtime/ runtime/
 RUN git clone https://github.com/OhadRau/LinearPromises .
 
+RUN rm -rf ~/.opam/
+RUN opam init
+RUN opam install dune menhir
 RUN eval $(opam config env) && dune build
 RUN opam install ./linear-promises.opam
 
