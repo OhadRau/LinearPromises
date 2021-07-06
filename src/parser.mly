@@ -114,9 +114,9 @@ type_expr:
 *)
   | ty = primitive_type
      { ty :> Lang.ty }
-  | TYPE_PROMISE MUL LEFT_PAREN; t = primitive_type; RIGHT_PAREN
+  | TYPE_PROMISE MUL LEFT_PAREN; t = type_expr; RIGHT_PAREN
      { `PromiseStar t }
-  | TYPE_PROMISE LEFT_PAREN; t = primitive_type; RIGHT_PAREN
+  | TYPE_PROMISE LEFT_PAREN; t = type_expr; RIGHT_PAREN
      { `Promise t }
 ;
 

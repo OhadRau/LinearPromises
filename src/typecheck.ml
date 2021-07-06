@@ -13,7 +13,7 @@ let resolveUserType userTypes = function
    a Promise* then it must be used, otherwise it does not need to be used. *)
 let rec must_use_ userTypes history = function
   | `Int | `Bool | `Unit | `String -> false
-  | `Promise t -> must_use userTypes (t :> ty)
+  | `Promise t -> must_use userTypes ~history t
   | `Custom c when List.mem c history -> false
   | `Custom c -> begin
     let resolved = resolveUserType userTypes (`Custom c) in
@@ -323,13 +323,13 @@ let rec typecheck userTypes env expr = match expr with
     let gamma_promise, gamma_value = split userTypes env promiseStar newValue |> Option.get in
     let value_ty = typecheck userTypes gamma_value newValue in
     begin match typecheck userTypes gamma_promise promiseStar with
-      | `PromiseStar ty when value_ty = (ty :> ty) && not unsafe -> `Unit
-      | `Promise ty when value_ty = (ty :> ty) && unsafe -> `Unit
+      | `PromiseStar ty when value_ty = ty && not unsafe -> `Unit
+      | `Promise ty when value_ty = ty && unsafe -> `Unit
       | _ -> failwith ("Expected promise of type " ^ string_of_ty value_ty)
     end
   | Read { promise } ->
     begin match typecheck userTypes env promise with
-      | `Promise value_ty -> (value_ty :> ty)
+      | `Promise value_ty -> value_ty
       | ty -> failwith ("Could not read non-promise type " ^ string_of_ty ty)
     end
   | For { name; first; last; forBody } ->
